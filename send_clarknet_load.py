@@ -60,15 +60,11 @@ def main():
                 try:
                     content_rps = int(row.get("Content_Service", 0))
                     media_rps = int(row.get("Media_Service", 0))
-                    dynamic_rps = int(row.get("DynamicAPI_Service", 0))
-                    others_rps = int(row.get("Others", 0))
                 except ValueError:
                     # Skip header errors or malformed lines
                     continue
 
-                # Group dynamic/others into /api endpoint
-                api_rps = dynamic_rps + others_rps
-                total_rps_target = content_rps + media_rps + api_rps
+                total_rps_target = content_rps + media_rps
 
                 # Submit requests concurrently
                 # /media -> media-service
@@ -79,13 +75,9 @@ def main():
                 for _ in range(content_rps):
                     executor.submit(send_request, "/content")
 
-                # /api -> content-service (CPU-bound)
-                for _ in range(api_rps):
-                    executor.submit(send_request, "/api")
-
                 # Print target rps for this second
                 if total_rps_target > 0:
-                    print(f"[{row['datetime']}] Dispatching target RPS: {total_rps_target} (Media: {media_rps}, Content: {content_rps}, API: {api_rps})")
+                    print(f"[{row['datetime']}] Dispatching target RPS: {total_rps_target} (Media: {media_rps}, Content: {content_rps})")
 
                 # Sleep to maintain 1-second interval
                 elapsed = time.time() - start_time
