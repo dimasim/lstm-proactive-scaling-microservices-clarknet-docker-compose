@@ -102,9 +102,12 @@ def main():
             if count >= duration:
                 break
             orig_media_rps.append(int(row.get("Media_Service", 0)))
-            # Content in original is just Content_Service
-            # In our mapping, content-service also handled Content_Service
-            orig_content_rps.append(int(row.get("Content_Service", 0)))
+            # Since both Content_Service and DynamicAPI_Service/Others route to content_back,
+            # we must sum them up to compare with content_back metrics.
+            content_val = int(row.get("Content_Service", 0))
+            dynamic_val = int(row.get("DynamicAPI_Service", 0))
+            others_val = int(row.get("Others", 0))
+            orig_content_rps.append(content_val + dynamic_val + others_val)
             count += 1
 
     # Print Comparison Statistics
