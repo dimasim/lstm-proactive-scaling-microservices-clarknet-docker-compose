@@ -149,8 +149,8 @@ func collectMetrics(promURL string) MetricsPayload {
 		"cpu_content":      `sum(rate(container_cpu_usage_seconds_total{container_label_com_docker_compose_service="content-service"}[5s])) * 100`,
 		"ram_media":        `sum(container_memory_working_set_bytes{container_label_com_docker_compose_service="media-service"}) / 1024 / 1024`,
 		"ram_content":      `sum(container_memory_working_set_bytes{container_label_com_docker_compose_service="content-service"}) / 1024 / 1024`,
-		"replicas_media":   `count(container_last_seen{container_label_com_docker_compose_service="media-service"})`,
-		"replicas_content": `count(container_last_seen{container_label_com_docker_compose_service="content-service"})`,
+		"replicas_media":   `count(container_last_seen{container_label_com_docker_compose_service="media-service"} > time() - 15)`,
+		"replicas_content": `count(container_last_seen{container_label_com_docker_compose_service="content-service"} > time() - 15)`,
 	}
 
 	var wg sync.WaitGroup
