@@ -1,10 +1,9 @@
-from fastapi import FastAPI
+from fastapi import APIRouter
 from fastapi.responses import HTMLResponse
-import os
 
-app = FastAPI()
+router = APIRouter()
 
-@app.get("/content", response_class=HTMLResponse)
+@router.get("/content", response_class=HTMLResponse)
 def read_content():
     # Simulate serving standard static HTML content pages
     return """
@@ -16,7 +15,3 @@ def read_content():
         </body>
     </html>
     """
-
-@app.get("/health")
-def health():
-    return {"status": "healthy"}

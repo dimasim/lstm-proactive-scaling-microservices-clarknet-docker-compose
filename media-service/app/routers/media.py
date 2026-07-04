@@ -1,9 +1,8 @@
-from fastapi import FastAPI
-import os
+from fastapi import APIRouter
 
-app = FastAPI()
+router = APIRouter()
 
-@app.get("/media")
+@router.get("/media")
 def read_media():
     # Simulate serving a small static media metadata or asset response
     return {
@@ -13,7 +12,3 @@ def read_media():
         "size_bytes": 10240,
         "message": "Serving mock media asset"
     }
-
-@app.get("/health")
-def health():
-    return {"status": "healthy"}
