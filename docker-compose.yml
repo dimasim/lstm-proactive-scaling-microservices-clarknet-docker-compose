@@ -8,6 +8,20 @@ services:
       - "${HAPROXY_PORT_HTTP}:80"
     volumes:
       - ./haproxy/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+    depends_on:
+      - media-service
+      - content-service
+
+  media-service:
+    build:
+      context: ./media-service
+    image: media-service:latest
+
+  content-service:
+    build:
+      context: ./content-service
+    image: content-service:latest
+
 
   cadvisor:
     image: ghcr.io/google/cadvisor:latest
