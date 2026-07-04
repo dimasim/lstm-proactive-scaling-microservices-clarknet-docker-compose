@@ -53,3 +53,16 @@ services:
     depends_on:
       - haproxy
 
+  dashboard-service:
+    build:
+      context: ./dashboard-service
+    container_name: dashboard-service
+    ports:
+      - "3002:3002"
+    environment:
+      - PROMETHEUS_URL=http://prometheus:9090
+      - PORT=3002
+    depends_on:
+      - prometheus
+
+
