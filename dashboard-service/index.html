@@ -37,15 +37,15 @@
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <!-- RPS Card -->
             <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 glow transition hover:border-indigo-500/50">
-                <div class="text-xs font-bold text-slate-300 uppercase tracking-wider">Current RPS (Quiz / Auth)</div>
+                <div class="text-xs font-bold text-slate-300 uppercase tracking-wider">Current RPS (Content / Media)</div>
                 <div class="mt-3 flex items-baseline justify-between">
                     <div>
-                        <span class="text-3xl font-extrabold text-white" id="stat-rps-quiz">0.00</span>
-                        <span class="text-xs text-indigo-400 block font-semibold mt-0.5">Quiz Service</span>
+                        <span class="text-3xl font-extrabold text-white" id="stat-rps-content">0.00</span>
+                        <span class="text-xs text-indigo-400 block font-semibold mt-0.5">Content Service</span>
                     </div>
                     <div class="text-right">
-                        <span class="text-3xl font-extrabold text-white" id="stat-rps-auth">0.00</span>
-                        <span class="text-xs text-emerald-400 block font-semibold mt-0.5">Auth Service</span>
+                        <span class="text-3xl font-extrabold text-white" id="stat-rps-media">0.00</span>
+                        <span class="text-xs text-emerald-400 block font-semibold mt-0.5">Media Service</span>
                     </div>
                 </div>
             </div>
@@ -55,12 +55,12 @@
                 <div class="text-xs font-bold text-slate-300 uppercase tracking-wider">AI Predicted RPS (+1m)</div>
                 <div class="mt-3 flex items-baseline justify-between">
                     <div>
-                        <span class="text-3xl font-extrabold text-white" id="stat-pred-quiz">0.00</span>
-                        <span class="text-xs text-purple-400 block font-semibold mt-0.5">Quiz Pred</span>
+                        <span class="text-3xl font-extrabold text-white" id="stat-pred-content">0.00</span>
+                        <span class="text-xs text-purple-400 block font-semibold mt-0.5">Content Pred</span>
                     </div>
                     <div class="text-right">
-                        <span class="text-3xl font-extrabold text-white" id="stat-pred-auth">0.00</span>
-                        <span class="text-xs text-purple-400 block font-semibold mt-0.5">Auth Pred</span>
+                        <span class="text-3xl font-extrabold text-white" id="stat-pred-media">0.00</span>
+                        <span class="text-xs text-purple-400 block font-semibold mt-0.5">Media Pred</span>
                     </div>
                 </div>
             </div>
@@ -70,12 +70,12 @@
                 <div class="text-xs font-bold text-slate-300 uppercase tracking-wider">Active / Target Replicas</div>
                 <div class="mt-3 flex items-baseline justify-between">
                     <div>
-                        <span class="text-3xl font-extrabold text-white" id="stat-repl-quiz">0 / 1</span>
-                        <span class="text-xs text-indigo-400 block font-semibold mt-0.5">Quiz Replicas</span>
+                        <span class="text-3xl font-extrabold text-white" id="stat-repl-content">0 / 1</span>
+                        <span class="text-xs text-indigo-400 block font-semibold mt-0.5">Content Replicas</span>
                     </div>
                     <div class="text-right">
-                        <span class="text-3xl font-extrabold text-white" id="stat-repl-auth">0 / 1</span>
-                        <span class="text-xs text-emerald-400 block font-semibold mt-0.5">Auth Replicas</span>
+                        <span class="text-3xl font-extrabold text-white" id="stat-repl-media">0 / 1</span>
+                        <span class="text-xs text-emerald-400 block font-semibold mt-0.5">Media Replicas</span>
                     </div>
                 </div>
             </div>
@@ -85,12 +85,12 @@
                 <div class="text-xs font-bold text-slate-300 uppercase tracking-wider">Resource Avg (CPU / RAM)</div>
                 <div class="mt-3 flex items-baseline justify-between">
                     <div>
-                        <span class="text-2xl font-extrabold text-white" id="stat-cpu-ram-quiz">0% / 0M</span>
-                        <span class="text-xs text-indigo-400 block font-semibold mt-0.5">Quiz Resource</span>
+                        <span class="text-2xl font-extrabold text-white" id="stat-cpu-ram-content">0% / 0M</span>
+                        <span class="text-xs text-indigo-400 block font-semibold mt-0.5">Content Resource</span>
                     </div>
                     <div class="text-right">
-                        <span class="text-2xl font-extrabold text-white" id="stat-cpu-ram-auth">0% / 0M</span>
-                        <span class="text-xs text-emerald-400 block font-semibold mt-0.5">Auth Resource</span>
+                        <span class="text-2xl font-extrabold text-white" id="stat-cpu-ram-media">0% / 0M</span>
+                        <span class="text-xs text-emerald-400 block font-semibold mt-0.5">Media Resource</span>
                     </div>
                 </div>
             </div>
@@ -141,20 +141,20 @@
         // Max data points to show on the charts (60 seconds)
         const maxDataPoints = 60;
         const timestamps = [];
-        const dataRpsQuiz = [];
-        const dataRpsAuth = [];
-        const dataPredQuiz = [];
-        const dataPredAuth = [];
+        const dataRpsContent = [];
+        const dataRpsMedia = [];
+        const dataPredContent = [];
+        const dataPredMedia = [];
         
-        const dataReplQuiz = [];
-        const dataReplAuth = [];
-        const dataTargetQuiz = [];
-        const dataTargetAuth = [];
+        const dataReplContent = [];
+        const dataReplMedia = [];
+        const dataTargetContent = [];
+        const dataTargetMedia = [];
 
-        const dataCpuQuiz = [];
-        const dataCpuAuth = [];
-        const dataRamQuiz = [];
-        const dataRamAuth = [];
+        const dataCpuContent = [];
+        const dataCpuMedia = [];
+        const dataRamContent = [];
+        const dataRamMedia = [];
 
         // Global Chart Options with high-contrast text and clean grids
         const chartOptions = {
@@ -200,8 +200,8 @@
                 labels: timestamps,
                 datasets: [
                     {
-                        label: 'Actual RPS (Quiz)',
-                        data: dataRpsQuiz,
+                        label: 'Actual RPS (Content)',
+                        data: dataRpsContent,
                         borderColor: '#6366f1',
                         backgroundColor: 'rgba(99, 102, 241, 0.05)',
                         fill: true,
@@ -209,8 +209,8 @@
                         borderWidth: 3
                     },
                     {
-                        label: 'Actual RPS (Auth)',
-                        data: dataRpsAuth,
+                        label: 'Actual RPS (Media)',
+                        data: dataRpsMedia,
                         borderColor: '#10b981',
                         backgroundColor: 'rgba(16, 185, 129, 0.05)',
                         fill: true,
@@ -218,8 +218,8 @@
                         borderWidth: 3
                     },
                     {
-                        label: 'AI Predicted RPS +1m (Quiz)',
-                        data: dataPredQuiz,
+                        label: 'AI Predicted RPS +1m (Content)',
+                        data: dataPredContent,
                         borderColor: '#a855f7',
                         borderDash: [5, 5],
                         fill: false,
@@ -227,8 +227,8 @@
                         borderWidth: 2
                     },
                     {
-                        label: 'AI Predicted RPS +1m (Auth)',
-                        data: dataPredAuth,
+                        label: 'AI Predicted RPS +1m (Media)',
+                        data: dataPredMedia,
                         borderColor: '#ec4899',
                         borderDash: [5, 5],
                         fill: false,
@@ -246,24 +246,24 @@
                 labels: timestamps,
                 datasets: [
                     {
-                        label: 'Actual Replicas (Quiz)',
-                        data: dataReplQuiz,
+                        label: 'Actual Replicas (Content)',
+                        data: dataReplContent,
                         borderColor: '#6366f1',
                         fill: false,
                         stepped: true,
                         borderWidth: 3
                     },
                     {
-                        label: 'Actual Replicas (Auth)',
-                        data: dataReplAuth,
+                        label: 'Actual Replicas (Media)',
+                        data: dataReplMedia,
                         borderColor: '#10b981',
                         fill: false,
                         stepped: true,
                         borderWidth: 3
                     },
                     {
-                        label: 'AI Target Replicas (Quiz)',
-                        data: dataTargetQuiz,
+                        label: 'AI Target Replicas (Content)',
+                        data: dataTargetContent,
                         borderColor: '#f97316',
                         borderDash: [6, 6],
                         fill: false,
@@ -271,8 +271,8 @@
                         borderWidth: 2
                     },
                     {
-                        label: 'AI Target Replicas (Auth)',
-                        data: dataTargetAuth,
+                        label: 'AI Target Replicas (Media)',
+                        data: dataTargetMedia,
                         borderColor: '#eab308',
                         borderDash: [6, 6],
                         fill: false,
@@ -290,16 +290,16 @@
                 labels: timestamps,
                 datasets: [
                     {
-                        label: 'Quiz CPU (%)',
-                        data: dataCpuQuiz,
+                        label: 'Content CPU (%)',
+                        data: dataCpuContent,
                         borderColor: '#6366f1',
                         fill: false,
                         tension: 0.2,
                         borderWidth: 2.5
                     },
                     {
-                        label: 'Auth CPU (%)',
-                        data: dataCpuAuth,
+                        label: 'Media CPU (%)',
+                        data: dataCpuMedia,
                         borderColor: '#10b981',
                         fill: false,
                         tension: 0.2,
@@ -316,16 +316,16 @@
                 labels: timestamps,
                 datasets: [
                     {
-                        label: 'Quiz Memory (MB)',
-                        data: dataRamQuiz,
+                        label: 'Content Memory (MB)',
+                        data: dataRamContent,
                         borderColor: '#6366f1',
                         fill: false,
                         tension: 0.2,
                         borderWidth: 2.5
                     },
                     {
-                        label: 'Auth Memory (MB)',
-                        data: dataRamAuth,
+                        label: 'Media Memory (MB)',
+                        data: dataRamMedia,
                         borderColor: '#10b981',
                         fill: false,
                         tension: 0.2,
@@ -348,58 +348,58 @@
 
             // For AI Predictions, we mock/set vectors to 0.0 or 1.0 (matching your Grafana configuration)
             // until the LSTM forecast model is integrated in Fase 2.
-            const predQuiz = 0.0;
-            const predAuth = 0.0;
-            const targetQuiz = 1.0;
-            const targetAuth = 1.0;
+            const predContent = 0.0;
+            const predMedia = 0.0;
+            const targetContent = 1.0;
+            const targetMedia = 1.0;
 
             // Update stats cards text
-            document.getElementById('stat-rps-quiz').innerText = payload.rps_quiz.toFixed(2);
-            document.getElementById('stat-rps-auth').innerText = payload.rps_auth.toFixed(2);
+            document.getElementById('stat-rps-content').innerText = payload.rps_content.toFixed(2);
+            document.getElementById('stat-rps-media').innerText = payload.rps_media.toFixed(2);
             
-            document.getElementById('stat-pred-quiz').innerText = predQuiz.toFixed(2);
-            document.getElementById('stat-pred-auth').innerText = predAuth.toFixed(2);
+            document.getElementById('stat-pred-content').innerText = predContent.toFixed(2);
+            document.getElementById('stat-pred-media').innerText = predMedia.toFixed(2);
             
-            document.getElementById('stat-repl-quiz').innerText = `${payload.replicas_quiz} / ${targetQuiz}`;
-            document.getElementById('stat-repl-auth').innerText = `${payload.replicas_auth} / ${targetAuth}`;
+            document.getElementById('stat-repl-content').innerText = `${payload.replicas_content} / ${targetContent}`;
+            document.getElementById('stat-repl-media').innerText = `${payload.replicas_media} / ${targetMedia}`;
 
-            document.getElementById('stat-cpu-ram-quiz').innerText = `${payload.cpu_quiz.toFixed(0)}% / ${payload.ram_quiz.toFixed(0)}M`;
-            document.getElementById('stat-cpu-ram-auth').innerText = `${payload.cpu_auth.toFixed(0)}% / ${payload.ram_auth.toFixed(0)}M`;
+            document.getElementById('stat-cpu-ram-content').innerText = `${payload.cpu_content.toFixed(0)}% / ${payload.ram_content.toFixed(0)}M`;
+            document.getElementById('stat-cpu-ram-media').innerText = `${payload.cpu_media.toFixed(0)}% / ${payload.ram_media.toFixed(0)}M`;
 
             // Push new data points
             if (timestamps.length >= maxDataPoints) {
                 timestamps.shift();
-                dataRpsQuiz.shift();
-                dataRpsAuth.shift();
-                dataPredQuiz.shift();
-                dataPredAuth.shift();
+                dataRpsContent.shift();
+                dataRpsMedia.shift();
+                dataPredContent.shift();
+                dataPredMedia.shift();
                 
-                dataReplQuiz.shift();
-                dataReplAuth.shift();
-                dataTargetQuiz.shift();
-                dataTargetAuth.shift();
+                dataReplContent.shift();
+                dataReplMedia.shift();
+                dataTargetContent.shift();
+                dataTargetMedia.shift();
 
-                dataCpuQuiz.shift();
-                dataCpuAuth.shift();
-                dataRamQuiz.shift();
-                dataRamAuth.shift();
+                dataCpuContent.shift();
+                dataCpuMedia.shift();
+                dataRamContent.shift();
+                dataRamMedia.shift();
             }
 
             timestamps.push(timeLabel);
-            dataRpsQuiz.push(payload.rps_quiz);
-            dataRpsAuth.push(payload.rps_auth);
-            dataPredQuiz.push(predQuiz);
-            dataPredAuth.push(predAuth);
+            dataRpsContent.push(payload.rps_content);
+            dataRpsMedia.push(payload.rps_media);
+            dataPredContent.push(predContent);
+            dataPredMedia.push(predMedia);
             
-            dataReplQuiz.push(payload.replicas_quiz);
-            dataReplAuth.push(payload.replicas_auth);
-            dataTargetQuiz.push(targetQuiz);
-            dataTargetAuth.push(targetAuth);
+            dataReplContent.push(payload.replicas_content);
+            dataReplMedia.push(payload.replicas_media);
+            dataTargetContent.push(targetContent);
+            dataTargetMedia.push(targetMedia);
 
-            dataCpuQuiz.push(payload.cpu_quiz);
-            dataCpuAuth.push(payload.cpu_auth);
-            dataRamQuiz.push(payload.ram_quiz);
-            dataRamAuth.push(payload.ram_auth);
+            dataCpuContent.push(payload.cpu_content);
+            dataCpuMedia.push(payload.cpu_media);
+            dataRamContent.push(payload.ram_content);
+            dataRamMedia.push(payload.ram_media);
 
             // Update charts smoothly
             chartRps.update();

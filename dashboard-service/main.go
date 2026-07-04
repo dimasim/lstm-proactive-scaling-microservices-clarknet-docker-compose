@@ -19,15 +19,15 @@ var frontendFS embed.FS
 
 // Message represents the SSE payload
 type MetricsPayload struct {
-	Timestamp    int64   `json:"timestamp"`
-	RpsAuth      float64 `json:"rps_auth"`
-	RpsQuiz      float64 `json:"rps_quiz"`
-	CpuAuth      float64 `json:"cpu_auth"`
-	CpuQuiz      float64 `json:"cpu_quiz"`
-	RamAuth      float64 `json:"ram_auth"`
-	RamQuiz      float64 `json:"ram_quiz"`
-	ReplicasAuth float64 `json:"replicas_auth"`
-	ReplicasQuiz float64 `json:"replicas_quiz"`
+	Timestamp       int64   `json:"timestamp"`
+	RpsMedia        float64 `json:"rps_media"`
+	RpsContent      float64 `json:"rps_content"`
+	CpuMedia        float64 `json:"cpu_media"`
+	CpuContent      float64 `json:"cpu_content"`
+	RamMedia        float64 `json:"ram_media"`
+	RamContent      float64 `json:"ram_content"`
+	ReplicasMedia   float64 `json:"replicas_media"`
+	ReplicasContent float64 `json:"replicas_content"`
 }
 
 // Client represents a connected SSE client
@@ -143,14 +143,14 @@ func collectMetrics(promURL string) MetricsPayload {
 	payload.Timestamp = time.Now().Unix()
 
 	queries := map[string]string{
-		"rps_auth":      `sum(idelta(haproxy_backend_http_requests_total{proxy="auth_back"}[2s]))`,
-		"rps_quiz":      `sum(idelta(haproxy_backend_http_requests_total{proxy="quiz_back"}[2s]))`,
-		"cpu_auth":      `sum(rate(container_cpu_usage_seconds_total{container_label_com_docker_compose_service="auth-service"}[5s])) * 100`,
-		"cpu_quiz":      `sum(rate(container_cpu_usage_seconds_total{container_label_com_docker_compose_service="quiz-service"}[5s])) * 100`,
-		"ram_auth":      `sum(container_memory_working_set_bytes{container_label_com_docker_compose_service="auth-service"}) / 1024 / 1024`,
-		"ram_quiz":      `sum(container_memory_working_set_bytes{container_label_com_docker_compose_service="quiz-service"}) / 1024 / 1024`,
-		"replicas_auth": `count(container_last_seen{container_label_com_docker_compose_service="auth-service"})`,
-		"replicas_quiz": `count(container_last_seen{container_label_com_docker_compose_service="quiz-service"})`,
+		"rps_media":        `sum(idelta(haproxy_backend_http_requests_total{proxy="media_back"}[2s]))`,
+		"rps_content":      `sum(idelta(haproxy_backend_http_requests_total{proxy="content_back"}[2s]))`,
+		"cpu_media":        `sum(rate(container_cpu_usage_seconds_total{container_label_com_docker_compose_service="media-service"}[5s])) * 100`,
+		"cpu_content":      `sum(rate(container_cpu_usage_seconds_total{container_label_com_docker_compose_service="content-service"}[5s])) * 100`,
+		"ram_media":        `sum(container_memory_working_set_bytes{container_label_com_docker_compose_service="media-service"}) / 1024 / 1024`,
+		"ram_content":      `sum(container_memory_working_set_bytes{container_label_com_docker_compose_service="content-service"}) / 1024 / 1024`,
+		"replicas_media":   `count(container_last_seen{container_label_com_docker_compose_service="media-service"})`,
+		"replicas_content": `count(container_last_seen{container_label_com_docker_compose_service="content-service"})`,
 	}
 
 	var wg sync.WaitGroup
@@ -166,22 +166,22 @@ func collectMetrics(promURL string) MetricsPayload {
 			}
 			mu.Lock()
 			switch k {
-			case "rps_auth":
-				payload.RpsAuth = val
-			case "rps_quiz":
-				payload.RpsQuiz = val
-			case "cpu_auth":
-				payload.CpuAuth = val
-			case "cpu_quiz":
-				payload.CpuQuiz = val
-			case "ram_auth":
-				payload.RamAuth = val
-			case "ram_quiz":
-				payload.RamQuiz = val
-			case "replicas_auth":
-				payload.ReplicasAuth = val
-			case "replicas_quiz":
-				payload.ReplicasQuiz = val
+			case "rps_media":
+				payload.RpsMedia = val
+			case "rps_content":
+				payload.RpsContent = val
+			case "cpu_media":
+				payload.CpuMedia = val
+			case "cpu_content":
+				payload.CpuContent = val
+			case "ram_media":
+				payload.RamMedia = val
+			case "ram_content":
+				payload.RamContent = val
+			case "replicas_media":
+				payload.ReplicasMedia = val
+			case "replicas_content":
+				payload.ReplicasContent = val
 			}
 			mu.Unlock()
 		}(key, query)
