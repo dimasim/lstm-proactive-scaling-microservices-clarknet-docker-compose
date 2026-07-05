@@ -81,3 +81,55 @@ Jaringan virtual diisolasi menggunakan **Docker Bridge Network** khusus bernama 
 1. **Internal DNS Resolution:** Layanan dapat saling berkomunikasi satu sama lain menggunakan nama service Docker mereka (misalnya, HAProxy menghubungi `content-service:8000` secara internal). HAProxy memanfaatkan DNS resolver Docker (`127.0.0.11:53`) untuk memantau IP kontainer baru yang ditambahkan selama proses *scaling*.
 2. **Isolasi Keamanan:** `media-service` dan `content-service` sengaja tidak memetakan (*mapping*) port mereka ke port host fisik. Satu-satunya akses masuk dari luar host menuju microservices harus melewati `haproxy` di port `8000`. Ini mencegah manipulasi trafik pengujian di luar load balancer.
 
+---
+
+## 5. Rencana Keamanan (Security Plan)
+
+Meskipun di-deploy sebagai lingkungan virtual untuk tugas akhir, standar keamanan minimal tetap diterapkan:
+
+* **Minimal Exposed Ports:** Hanya port yang krusial untuk pemantauan dan pengujian beban saja yang diekspos ke host OS luar (Port `8000` untuk load balancer, `3002` untuk dashboard, dan `9090` untuk Prometheus).
+* **Read-Only Volumes:** File konfigurasi sensitif seperti `haproxy.cfg` dan `prometheus.yml` dipasang (*mounted*) ke dalam container dengan hak akses **Read-Only (`:ro`)** untuk mencegah modifikasi tidak sah oleh proses runtime container.
+* **Network Partitioning:** Pemisahan fungsionalitas jaringan di mana generator beban hanya dapat mengakses frontend HTTP HAProxy tanpa memiliki akses langsung ke port metrik Prometheus atau cAdvisor.
+
+---
+
+## 6. Pemantauan & Pencatatan (Monitoring & Logging Plan)
+
+Sistem pengumpulan metrik dirancang secara efisien menggunakan pendekatan **Pull-Based Metrics Collection**:
+
+```text
++--------------+                   +------------+
+|  cAdvisor    |<--[Scrapes]-------|            |
++--------------+                   |            |
+                                   | Prometheus |<--[Poll Metrics]-- Go Dashboard
++--------------+                   |            |
+|  HAProxy     |<--[Scrapes]-------|            |
++--------------+                   +------------+
+```
+
+### Metrik Kunci yang Dipantau:
+1. **Metrik Beban Trafik (HAProxy):**
+   * `haproxy_backend_http_requests_total`: Mengukur total request per detik (RPS) masuk untuk memvalidasi kesesuaian beban kerja dengan dataset ClarkNet.
+2. **Metrik Kinerja Kontainer (cAdvisor):**
+   * `container_cpu_usage_seconds_total`: Digunakan untuk menghitung persentase beban CPU kontainer secara berkala.
+   * `container_memory_working_set_bytes`: Mengukur jumlah memori RAM aktif yang digunakan oleh kontainer secara akurat (menghindari kesalahan deteksi dari memori cache virtual).
+3. **Metrik Replikasi (cAdvisor):**
+   * `count(container_last_seen{container_label_...} > time() - 15)`: Mengukur jumlah instans/replika kontainer yang saat ini aktif beroperasi di dalam Docker Engine.
+
+---
+
+## 7. Rencana Skalabilitas (Scalability Plan)
+
+Sistem auto-scaling dirancang untuk menangani beban kerja fluktuatif secara adaptif dengan dua pendekatan utama:
+
+### A. Reactive Auto-scaling (Baseline / Pembanding)
+* Menggunakan nilai ambang batas (*threshold*) CPU statis (misalnya, jika rata-rata penggunaan CPU kontainer di atas **70%** selama 15 detik berturut-turut, sistem akan menambah 1 replika kontainer baru).
+
+### B. Proactive Auto-scaling (Fokus Utama Penelitian AI)
+* **Prediksi Beban Kerja:** Model LSTM dilatih menggunakan data histori RPS dari `collected_metrics.csv` untuk memprediksi trafik 15 hingga 30 detik ke depan.
+* **Skalabilitas Preventif:** Jika LSTM mendeteksi akan terjadi lonjakan trafik di atas ambang kapasitas aman dalam 30 detik mendatang, sinyal skalabilitas dikirimkan ke Docker Daemon Socket untuk melakukan replikasi kontainer **sebelum** lonjakan trafik yang sebenarnya tiba di server. Hal ini meniadakan latensi waktu tunggu *bootup* kontainer (Cold-Start Delay) sehingga SLA tetap terjaga di level 100%.
+* **Strategi Cooldown & Pelemahan Beban (CDT & GDS):** 
+  * *Cooldown Timer (CDT):* Menetapkan jeda waktu (misal 30 detik) setelah aksi scaling agar sistem stabil terlebih dahulu sebelum memutuskan aksi scaling berikutnya.
+  * *Gradually Decreasing Strategy (GDS):* Pengurangan jumlah kontainer secara bertahap (satu per satu) saat trafik menurun untuk menghindari pemutusan koneksi yang mendadak bagi user aktif.
+
+
