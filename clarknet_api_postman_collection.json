@@ -1,0 +1,50 @@
+{
+	"info": {
+		"_postman_id": "b182cb9e-56e6-4228-a53b-e01d898495a8",
+		"name": "ClarkNet Microservices",
+		"description": "Collection for testing ClarkNet microservices endpoints through HAProxy Load Balancer.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Get Media Asset",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8000/media",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8000",
+					"path": [
+						"media"
+					]
+				},
+				"description": "Endpoint to serve static media assets via HAProxy (routed to media-service)."
+			},
+			"response": []
+		},
+		{
+			"name": "Get Content Page",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8000/content",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8000",
+					"path": [
+						"content"
+					]
+				},
+				"description": "Endpoint to serve HTML content pages via HAProxy (routed to content-service)."
+			},
+			"response": []
+		}
+	]
+}
