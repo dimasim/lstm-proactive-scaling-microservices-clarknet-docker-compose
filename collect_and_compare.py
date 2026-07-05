@@ -28,12 +28,13 @@ def query_prometheus_range(query: str, start: int, end: int, step: str = "1s"):
 
 def main():
     if len(sys.argv) < 3:
-        print("Usage: python3 collect_and_compare.py <start_unix_timestamp> <end_unix_timestamp>")
+        print("Usage: python3 collect_and_compare.py <start_unix_timestamp> <end_unix_timestamp> [dataset_start_index]")
         return
 
     start_ts = int(sys.argv[1])
     end_ts = int(sys.argv[2])
     duration = end_ts - start_ts
+    dataset_start_idx = int(sys.argv[3]) if len(sys.argv) > 3 else 0
 
     print(f"Collecting Prometheus metrics from {start_ts} to {end_ts} (Duration: {duration}s)...")
 
@@ -98,7 +99,9 @@ def main():
     with open(DATASET_CSV, mode='r', encoding='utf-8') as f:
         reader = csv.DictReader(f)
         count = 0
-        for row in reader:
+        for idx, row in enumerate(reader):
+            if idx < dataset_start_idx:
+                continue
             if count >= duration:
                 break
             orig_media_rps.append(int(row.get("Media_Service", 0)))
