@@ -44,3 +44,40 @@ graph TD
 4. **cAdvisor (Container Advisor):** Agen pengumpul statistik resource kontainer yang berjalan secara *daemon*. cAdvisor langsung membaca data pemakaian CPU, memori, dan I/O dari kernel cgroups Linux untuk setiap kontainer microservice yang sedang berjalan.
 5. **Prometheus:** Database *time-series* yang mengumpulkan (*scrape*) data telemetri dari cAdvisor dan HAProxy secara berkala (interval 1 detik) untuk kebutuhan penyimpanan histori performa.
 6. **Dashboard Service:** Aplikasi visualisasi web *real-time* berbasis bahasa pemrograman Go (port `3002`) untuk memantau grafik metrik (RPS, CPU, RAM, jumlah replika aktif) selama pengujian berlangsung.
+
+---
+
+## 3. Rencana Kontainerisasi (Containerization Plan)
+
+Setiap komponen dikemas menggunakan image Docker yang dioptimalkan untuk meminimalkan *resource footprint* (skala ukuran image kecil) dan meningkatkan kecepatan proses *startup*:
+
+| Service | Base Image | Metode Build | Port Internal | Deskripsi Port Eksternal |
+| :--- | :--- | :--- | :---: | :---: |
+| `haproxy` | `haproxy:2.8-alpine` | Pre-built Image | `80`, `8404` | `8000` (HTTP), `8404` (Prometheus Exporter) |
+| `media-service` | `python:3.10-slim` | Custom Dockerfile | `8000` | Tidak diekspos langsung (Lewat HAProxy) |
+| `content-service`| `python:3.10-slim` | Custom Dockerfile | `8000` | Tidak diekspos langsung (Lewat HAProxy) |
+| `cadvisor` | `gcr.io/cadvisor/cadvisor` | Pre-built Image | `8080` | `8088` (Metrik Container) |
+| `prometheus` | `prom/prometheus:v2.45.0` | Pre-built Image | `9090` | `9090` (Prometheus Web UI) |
+| `dashboard` | `golang:1.20-alpine` | Custom Dockerfile | `3002` | `3002` (Dashboard Visualisasi) |
+
+### Strategi Pembatasan Resource (Resource Limiting) untuk Pengujian LSTM:
+Untuk mensimulasikan kondisi kegagalan SLA dan memicu *auto-scaling* secara nyata selama pengujian LSTM, batas atas kapasitas kontainer (*resource limit*) diatur pada file `docker-compose.yml` saat pengujian model dimulai:
+```yaml
+  content-service:
+    deploy:
+      resources:
+        limits:
+          cpus: '0.20'      # Membatasi container maksimal menggunakan 20% dari 1 Core CPU Host
+          memory: 128M      # Membatasi memori maksimal 128 MegaBytes
+```
+*Catatan: Pembatasan ini sengaja dinonaktifkan pada tahap pengumpulan dataset awal agar data penggunaan CPU/RAM murni mencerminkan kebutuhan asli beban kerja tanpa terpotong (*throttling*).*
+
+---
+
+## 4. Jaringan Sistem (Networking Plan)
+
+Jaringan virtual diisolasi menggunakan **Docker Bridge Network** khusus bernama `clarknet-net`. Keuntungan dari metode ini adalah:
+
+1. **Internal DNS Resolution:** Layanan dapat saling berkomunikasi satu sama lain menggunakan nama service Docker mereka (misalnya, HAProxy menghubungi `content-service:8000` secara internal). HAProxy memanfaatkan DNS resolver Docker (`127.0.0.11:53`) untuk memantau IP kontainer baru yang ditambahkan selama proses *scaling*.
+2. **Isolasi Keamanan:** `media-service` dan `content-service` sengaja tidak memetakan (*mapping*) port mereka ke port host fisik. Satu-satunya akses masuk dari luar host menuju microservices harus melewati `haproxy` di port `8000`. Ini mencegah manipulasi trafik pengujian di luar load balancer.
+
