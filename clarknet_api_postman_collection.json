@@ -12,12 +12,10 @@
 				"method": "GET",
 				"header": [],
 				"url": {
-					"raw": "http://localhost:8000/media",
-					"protocol": "http",
+					"raw": "{{baseUrl}}/media",
 					"host": [
-						"localhost"
+						"{{baseUrl}}"
 					],
-					"port": "8000",
 					"path": [
 						"media"
 					]
@@ -32,12 +30,10 @@
 				"method": "GET",
 				"header": [],
 				"url": {
-					"raw": "http://localhost:8000/content",
-					"protocol": "http",
+					"raw": "{{baseUrl}}/content",
 					"host": [
-						"localhost"
+						"{{baseUrl}}"
 					],
-					"port": "8000",
 					"path": [
 						"content"
 					]
@@ -45,6 +41,13 @@
 				"description": "Endpoint to serve HTML content pages via HAProxy (routed to content-service)."
 			},
 			"response": []
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:8000",
+			"type": "string"
 		}
 	]
 }
