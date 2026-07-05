@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ClarkNet Online - Internet Service Provider Portal</title>
+    <style>
+        :root {
+            --bg-color: #0b0f19;
+            --panel-bg: #111827;
+            --accent-primary: #f43f5e;
+            --accent-secondary: #3b82f6;
+            --text-main: #e2e8f0;
+            --text-muted: #94a3b8;
+            --border-color: #1f2937;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: 'Courier New', Courier, monospace;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            border: 2px solid var(--accent-primary);
+            box-shadow: 0 0 20px rgba(244, 63, 94, 0.3);
+            background-color: var(--panel-bg);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        header {
+            background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
+            padding: 20px;
+            text-align: center;
+            border-bottom: 2px solid var(--accent-primary);
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 2.2rem;
+            letter-spacing: 4px;
+            color: #ffffff;
+            text-shadow: 2px 2px #000000;
+        }
+
+        header p {
+            margin: 5px 0 0 0;
+            font-size: 0.9rem;
+            color: #e2e8f0;
+            text-transform: uppercase;
+        }
+
+        .marquee-container {
+            background-color: #000000;
+            border-bottom: 1px solid var(--border-color);
+            padding: 5px;
+            color: var(--accent-secondary);
+            font-weight: bold;
+        }
+
+        .main-content {
+            padding: 25px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-cols: 1fr;
+            gap: 20px;
+        }
+
+        @media(min-width: 768px) {
+            .grid {
+                grid-template-cols: 1fr 2fr;
+            }
+        }
+
+        .sidebar {
+            border: 1px solid var(--border-color);
+            padding: 15px;
+            border-radius: 6px;
+            background-color: rgba(0, 0, 0, 0.2);
+        }
+
+        .sidebar h2 {
+            color: var(--accent-primary);
+            font-size: 1.1rem;
+            border-bottom: 1px solid var(--accent-primary);
+            padding-bottom: 5px;
+            margin-top: 0;
+        }
+
+        .sidebar ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .sidebar ul li {
+            padding: 8px 0;
+            border-bottom: 1px dashed var(--border-color);
+        }
+
+        .sidebar ul li a {
+            color: var(--text-main);
+            text-decoration: none;
+        }
+
+        .sidebar ul li a:hover {
+            color: var(--accent-secondary);
+        }
+
+        .dashboard {
+            border: 1px solid var(--border-color);
+            padding: 15px;
+            border-radius: 6px;
+        }
+
+        .dashboard h2 {
+            color: var(--accent-secondary);
+            font-size: 1.3rem;
+            border-bottom: 1px solid var(--accent-secondary);
+            padding-bottom: 5px;
+            margin-top: 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+            margin-top: 15px;
+        }
+
+        table th, table td {
+            border: 1px solid var(--border-color);
+            padding: 8px;
+            text-align: left;
+        }
+
+        table th {
+            background-color: rgba(59, 130, 246, 0.1);
+            color: var(--accent-secondary);
+        }
+
+        table tr:nth-child(even) {
+            background-color: rgba(255, 255, 255, 0.02);
+        }
+
+        .status-badge {
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 0.75rem;
+            font-weight: bold;
+        }
+
+        .status-active {
+            background-color: rgba(16, 185, 129, 0.2);
+            color: #10b981;
+            border: 1px solid #10b981;
+        }
+
+        footer {
+            text-align: center;
+            padding: 15px;
+            border-top: 2px solid var(--accent-primary);
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            background-color: rgba(0, 0, 0, 0.4);
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>CLARKNET ONLINE</h1>
+        <p>Internet Access & World Wide Web Services -- Est. 1995</p>
+    </header>
+
+    <div class="marquee-container">
+        <marquee scrollamount="4">+++ Welcome to ClarkNet Gateway! Node Status: NOMINAL | Total Dial-up nodes active: 150/150 +++</marquee>
+    </div>
+
+    <div class="main-content">
+        <div class="grid">
+            <div class="sidebar">
+                <h2>SERVICES</h2>
+                <ul>
+                    <li><a href="#"># Dial-up Access (28.8K)</a></li>
+                    <li><a href="#"># ISDN Digital Lines</a></li>
+                    <li><a href="#"># Custom Web Hosting</a></li>
+                    <li><a href="#"># Usenet Newsgroup Feed</a></li>
+                    <li><a href="#"># Anonymous FTP Archive</a></li>
+                </ul>
+
+                <h2 style="margin-top: 20px;">SYSTEM STATS</h2>
+                <p style="font-size: 0.8rem; margin: 5px 0;"><strong>OS:</strong> FreeBSD 2.0-RELEASE</p>
+                <p style="font-size: 0.8rem; margin: 5px 0;"><strong>Active Shells:</strong> 254</p>
+                <p style="font-size: 0.8rem; margin: 5px 0;"><strong>Load Avg:</strong> 0.45, 0.20, 0.12</p>
+            </div>
+
+            <div class="dashboard">
+                <h2>Active Dial-up User Sessions</h2>
+                <p style="font-size: 0.85rem; color: var(--text-muted);">Showing dynamic connection logs sorted by duration to simulate node CPU tables:</p>
+                
+                <table>
+                    <thead>
+                        <tr>
+                            <th>User ID</th>
+                            <th>Node</th>
+                            <th>IP Address</th>
+                            <th>Baud Rate</th>
+                            <th>Duration (m)</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in users %}
+                        <tr>
+                            <td><strong>{{ user.username }}</strong></td>
+                            <td>{{ user.node }}</td>
+                            <td>{{ user.ip }}</td>
+                            <td>{{ user.baud }}</td>
+                            <td>{{ user.duration }}</td>
+                            <td><span class="status-badge status-active">ACTIVE</span></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>ClarkNet is a registered trademark of ClarkNet, Inc. Baltimore, MD. Send comments to webmaster@clark.net.</p>
+    </footer>
+</div>
+
+</body>
+</html>
