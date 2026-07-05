@@ -28,6 +28,8 @@ type MetricsPayload struct {
 	RamContent      float64 `json:"ram_content"`
 	ReplicasMedia   float64 `json:"replicas_media"`
 	ReplicasContent float64 `json:"replicas_content"`
+	LatencyMedia    float64 `json:"latency_media"`
+	LatencyContent  float64 `json:"latency_content"`
 }
 
 // Client represents a connected SSE client
@@ -151,6 +153,8 @@ func collectMetrics(promURL string) MetricsPayload {
 		"ram_content":      `sum(container_memory_working_set_bytes{container_label_com_docker_compose_service="content-service"}) / 1024 / 1024`,
 		"replicas_media":   `count(container_last_seen{container_label_com_docker_compose_service="media-service"} > time() - 15)`,
 		"replicas_content": `count(container_last_seen{container_label_com_docker_compose_service="content-service"} > time() - 15)`,
+		"latency_media":    `sum(haproxy_backend_response_time_average_seconds{proxy="media_back"}) * 1000`,
+		"latency_content":  `sum(haproxy_backend_response_time_average_seconds{proxy="content_back"}) * 1000`,
 	}
 
 	var wg sync.WaitGroup
@@ -182,6 +186,10 @@ func collectMetrics(promURL string) MetricsPayload {
 				payload.ReplicasMedia = val
 			case "replicas_content":
 				payload.ReplicasContent = val
+			case "latency_media":
+				payload.LatencyMedia = val
+			case "latency_content":
+				payload.LatencyContent = val
 			}
 			mu.Unlock()
 		}(key, query)
