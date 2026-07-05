@@ -30,9 +30,9 @@ def read_media():
         with open(image_path, "rb") as img_file:
             img_bytes = img_file.read()
         
-        # Calculate SHA-256 hash multiple times to create a predictable CPU load
+        # Calculate SHA-256 hash 1 time to create a predictable CPU load
         sha_hash = img_bytes
-        for _ in range(4):
+        for _ in range(1):
             sha_hash = hashlib.sha256(sha_hash).digest()
         hash_hex = sha_hash.hex()
         

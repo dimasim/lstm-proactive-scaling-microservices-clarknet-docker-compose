@@ -23,10 +23,10 @@ def read_content(request: Request):
         duration = (i * 7) % 180
         
         # 2. Simulate database decryption/billing checks (CPU-bound)
-        # We calculate MD5 hash 600 times for each user session to create realistic CPU load
+        # We calculate MD5 hash 120 times for each user session to create realistic CPU load
         data_str = f"{username}-{ip}-{node}-{baud}-{duration}"
         hash_val = data_str.encode()
-        for _ in range(600):
+        for _ in range(120):
             hash_val = hashlib.md5(hash_val).hexdigest().encode()
 
         users.append({
