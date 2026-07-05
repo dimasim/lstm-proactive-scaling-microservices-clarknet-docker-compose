@@ -48,7 +48,9 @@ def main():
         "ram_media": 'sum(container_memory_working_set_bytes{container_label_com_docker_compose_service="media-service"}) / 1024 / 1024',
         "ram_content": 'sum(container_memory_working_set_bytes{container_label_com_docker_compose_service="content-service"}) / 1024 / 1024',
         "replicas_media": 'count(container_last_seen{container_label_com_docker_compose_service="media-service"} > time() - 15)',
-        "replicas_content": 'count(container_last_seen{container_label_com_docker_compose_service="content-service"} > time() - 15)'
+        "replicas_content": 'count(container_last_seen{container_label_com_docker_compose_service="content-service"} > time() - 15)',
+        "latency_media": 'sum(haproxy_backend_response_time_average_seconds{proxy="media_back"}) * 1000',
+        "latency_content": 'sum(haproxy_backend_response_time_average_seconds{proxy="content_back"}) * 1000'
     }
 
     # Gather data points
@@ -77,7 +79,7 @@ def main():
     print(f"Writing metrics to {OUTPUT_CSV}...")
     with open(OUTPUT_CSV, mode='w', encoding='utf-8', newline='') as f:
         writer = csv.writer(f)
-        writer.writerow(["timestamp", "rps_media", "rps_content", "cpu_media", "cpu_content", "ram_media", "ram_content", "replicas_media", "replicas_content"])
+        writer.writerow(["timestamp", "rps_media", "rps_content", "cpu_media", "cpu_content", "ram_media", "ram_content", "replicas_media", "replicas_content", "latency_media", "latency_content"])
         for idx in range(duration):
             writer.writerow([
                 start_ts + idx,
@@ -88,7 +90,9 @@ def main():
                 series_data["ram_media"][idx],
                 series_data["ram_content"][idx],
                 series_data["replicas_media"][idx],
-                series_data["replicas_content"][idx]
+                series_data["replicas_content"][idx],
+                series_data["latency_media"][idx],
+                series_data["latency_content"][idx]
             ])
 
     # Compare with dataset
