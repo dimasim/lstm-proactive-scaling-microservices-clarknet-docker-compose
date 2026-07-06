@@ -1,11 +1,11 @@
 # PROPOSAL & RENCANA DEPLOYMENT SISTEM: VIRTUAL SERVICE TESTBED FOR PROACTIVE AUTO-SCALING MICROSERVICES
-**Studi Kasus: Pengujian Proactive Auto-scaling Berbasis LSTM Menggunakan Dataset Beban Kerja ClarkNet**
+**Studi Kasus: Pengujian Proactive Auto-scaling Berbasis LSTM, GRU, dan Bi-LSTM Menggunakan Dataset Beban Kerja ClarkNet**
 
 ---
 
 ## 1. Pendahuluan & Abstraksi Sistem
 
-Riset tugas akhir/skripsi ini bertujuan untuk membangun dan menguji efektivitas sistem **Proactive Auto-scaling** pada arsitektur *microservices* menggunakan model peramalan *Long Short-Term Memory* (LSTM). Untuk melatih dan menguji model AI tersebut, diimplementasikan sebuah *virtual service testbed* yang stabil, terukur, dan mampu mereproduksi beban kerja dunia nyata secara presisi.
+Riset tugas akhir/skripsi ini bertujuan untuk membangun dan menguji efektivitas sistem **Proactive Auto-scaling** pada arsitektur *microservices* menggunakan model peramalan *recurrent* seperti *Long Short-Term Memory* (LSTM), *Gated Recurrent Unit* (GRU), dan *Bidirectional LSTM* (Bi-LSTM). Untuk melatih dan menguji model AI tersebut, diimplementasikan sebuah *virtual service testbed* yang stabil, terukur, dan mampu mereproduksi beban kerja dunia nyata secara presisi.
 
 Dokumen ini memaparkan rencana *deployment* terperinci dari arsitektur *testbed* virtual tersebut. Seluruh layanan dikemas dalam bentuk kontainer (*containerized services*) menggunakan **Docker Compose**, disalurkan melalui gerbang beban **HAProxy**, dipantau menggunakan **Prometheus & cAdvisor**, serta beban kerjanya disimulasikan menggunakan generator beban berbasis python yang mereproduksi trafik **ClarkNet Web Server Dataset (1995)**.
 
@@ -32,8 +32,8 @@ graph TD
     end
 
     subgraph AI Scaling Controller (Future)
-        LSTMController[LSTM Scaling Engine] -->|Predictive Scaling Decisions| DockerSocket[Docker Daemon Socket]
-        LSTMController -->|Get Historical Telemetry| Prometheus
+        AIController[AI Scaling Engine - LSTM/GRU/Bi-LSTM] -->|Predictive Scaling Decisions| DockerSocket[Docker Daemon Socket]
+        AIController -->|Get Historical Telemetry| Prometheus
     end
 ```
 
@@ -60,8 +60,8 @@ Setiap komponen dikemas menggunakan image Docker yang dioptimalkan untuk meminim
 | `prometheus` | `prom/prometheus:v2.45.0` | Pre-built Image | `9090` | `9090` (Prometheus Web UI) |
 | `dashboard` | `golang:1.20-alpine` | Custom Dockerfile | `3002` | `3002` (Dashboard Visualisasi) |
 
-### Strategi Pembatasan Resource (Resource Limiting) untuk Pengujian LSTM:
-Untuk mensimulasikan kondisi kegagalan SLA dan memicu *auto-scaling* secara nyata selama pengujian LSTM, batas atas kapasitas kontainer (*resource limit*) diatur pada file `docker-compose.yml` saat pengujian model dimulai:
+### Strategi Pembatasan Resource (Resource Limiting) untuk Pengujian Proaktif (LSTM/GRU/Bi-LSTM):
+Untuk mensimulasikan kondisi kegagalan SLA dan memicu *auto-scaling* secara nyata selama pengujian model proaktif, batas atas kapasitas kontainer (*resource limit*) diatur pada file `docker-compose.yml` saat pengujian model dimulai:
 ```yaml
   content-service:
     deploy:
@@ -126,8 +126,8 @@ Sistem auto-scaling dirancang untuk menangani beban kerja fluktuatif secara adap
 * Menggunakan nilai ambang batas (*threshold*) CPU statis (misalnya, jika rata-rata penggunaan CPU kontainer di atas **70%** selama 15 detik berturut-turut, sistem akan menambah 1 replika kontainer baru).
 
 ### B. Proactive Auto-scaling (Fokus Utama Penelitian AI)
-* **Prediksi Beban Kerja:** Model LSTM dilatih menggunakan data histori RPS dari `collected_metrics.csv` untuk memprediksi trafik 15 hingga 30 detik ke depan.
-* **Skalabilitas Preventif:** Jika LSTM mendeteksi akan terjadi lonjakan trafik di atas ambang kapasitas aman dalam 30 detik mendatang, sinyal skalabilitas dikirimkan ke Docker Daemon Socket untuk melakukan replikasi kontainer **sebelum** lonjakan trafik yang sebenarnya tiba di server. Hal ini meniadakan latensi waktu tunggu *bootup* kontainer (Cold-Start Delay) sehingga SLA tetap terjaga di level 100%.
+* **Prediksi Beban Kerja:** Model peramalan *recurrent* (LSTM, GRU, dan Bi-LSTM) dilatih menggunakan data histori RPS dari `collected_metrics.csv` untuk memprediksi trafik 15 hingga 30 detik ke depan.
+* **Skalabilitas Preventif:** Jika model AI (LSTM/GRU/Bi-LSTM) mendeteksi akan terjadi lonjakan trafik di atas ambang kapasitas aman dalam 30 detik mendatang, sinyal skalabilitas dikirimkan ke Docker Daemon Socket untuk melakukan replikasi kontainer **sebelum** lonjakan trafik yang sebenarnya tiba di server. Hal ini meniadakan latensi waktu tunggu *bootup* kontainer (Cold-Start Delay) sehingga performa tetap optimal dan SLA terjaga.
 * **Strategi Cooldown & Pelemahan Beban (CDT & GDS):** 
   * *Cooldown Timer (CDT):* Menetapkan jeda waktu (misal 30 detik) setelah aksi scaling agar sistem stabil terlebih dahulu sebelum memutuskan aksi scaling berikutnya.
   * *Gradually Decreasing Strategy (GDS):* Pengurangan jumlah kontainer secara bertahap (satu per satu) saat trafik menurun untuk menghindari pemutusan koneksi yang mendadak bagi user aktif.
