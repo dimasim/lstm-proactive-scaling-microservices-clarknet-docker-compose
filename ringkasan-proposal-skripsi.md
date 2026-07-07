@@ -41,12 +41,12 @@
 1. Bagaimana merancang & mengimplementasikan mekanisme proactive auto-scaling berbasis LSTM yang mampu memprediksi pelanggaran SLA sebelum terjadi pada arsitektur microservices di Docker Compose?
 2. Sejauh mana integrasi LSTM ke dalam MAPE loop meningkatkan kemampuan self-healing untuk mencegah cascading failure akibat anomali (memory leak, CPU spike)?
 3. Bagaimana dampak sistem ini terhadap efisiensi biaya infrastruktur & kepatuhan SLA, dibanding auto-scaling reaktif threshold konvensional, menggunakan Dataset Log Aktivitas Kuis Riil sebagai profil beban kerja?
-4. Bagaimana perbandingan performa model LSTM dan GRU dalam konteks prediksi beban kerja untuk auto-scaling proaktif pada lingkungan Docker Compose?
+4. Bagaimana perbandingan performa model LSTM, GRU, dan Bi-LSTM dalam konteks prediksi beban kerja untuk auto-scaling proaktif pada lingkungan Docker Compose?
 
 ## 4. Batasan Masalah
 
 1. Platform orkestrasi **eksklusif Docker Compose** (tidak mencakup Kubernetes, Docker Swarm, AWS ECS/GKE/AKS).
-2. Model deep learning yang dikembangkan dan dievaluasi adalah **LSTM (univariat dan multivariat) serta GRU sebagai pembanding arsitektur recurrent**. Perbandingan dengan arsitektur lain seperti Bi-LSTM, Transformer, TCN, atau GNN berada di luar cakupan penelitian ini, meskipun dapat dijadikan acuan dalam analisis komparatif literatur.
+2. Model deep learning yang dikembangkan dan dievaluasi adalah **LSTM (univariat dan multivariat), GRU, serta Bi-LSTM sebagai pembanding arsitektur recurrent**. Perbandingan dengan arsitektur lain seperti Transformer, TCN, atau GNN berada di luar cakupan penelitian ini, meskipun dapat dijadikan acuan dalam analisis komparatif literatur.
 3. Parameter SLA didefinisikan sebagai pemeliharaan kinerja sistem agar berada pada batas optimal (menghindari degradasi performa/latency) berdasarkan kapasitas beban kerja maksimum per kontainer ($W_{container}^{max}$). Mengikuti jurnal Imdoukh (2019), tingkat kepatuhan SLA dievaluasi melalui metrik under-provisioning ($\theta_U$), over-provisioning ($\theta_O$), serta durasi penyimpangan SLA ($T_U$ dan $T_O$). Label target prediksi: 1 = berpotensi melanggar SLA / under-provisioned (workload melebihi total kapasitas kontainer aktif, yaitu $W_{predicted}^{total} > R_{current} \times W_{container}^{max}$), 0 = normal.
 4. Data beban kerja: **Dataset Log Aktivitas Kuis Riil (`log_quiz_attempts.csv`)** sebanyak 293.538 baris log dari 733 mahasiswa unik. Untuk mencegah overfitting dan menyelaraskan dengan jurnal rujukan utama (Imdoukh et al., 2019), dataset diagregasikan ke tingkat menit (Requests Per Minute - RPM).
 5. Layanan microservices dibangun dengan **Go** (performa tinggi, I/O database bound dengan kapasitas batas 300 RPS) dan **NestJS** (API REST, CPU-bound bcrypt dengan kapasitas batas 21 RPS).
@@ -56,13 +56,13 @@
 
 ## 5. Tujuan
 
-1. Merancang & mengimplementasikan sistem proactive auto-scaling berbasis LSTM dalam siklus MAPE loop otomatis di atas Docker Compose dengan penerapan **Gradually Decreasing Strategy (GDS)** untuk mitigasi osilasi, serta membandingkan performa model LSTM dengan model GRU sebagai baseline arsitektur alternatif recurrent dari sisi akurasi prediksi (MAE, RMSE, MAPE) dan kecepatan inferensi.
+1. Merancang & mengimplementasikan sistem proactive auto-scaling berbasis LSTM dalam siklus MAPE loop otomatis di atas Docker Compose dengan penerapan **Gradually Decreasing Strategy (GDS)** untuk mitigasi osilasi, serta membandingkan performa model LSTM dengan model GRU dan Bi-LSTM sebagai pembanding arsitektur recurrent dari sisi akurasi prediksi (MAE, RMSE, MAPE) dan kecepatan inferensi.
 2. Mengevaluasi efektivitas self-healing dalam mencegah pelanggaran SLA & cascading failure lewat injeksi anomali terstruktur — metrik: **Time-To-Scale (TTS)**, **SLA Violation Rate**, latensi respons rata-rata.
 3. Menganalisis & mengkuantifikasi efisiensi biaya infrastruktur dibanding auto-scaling reaktif threshold, memakai Dataset Log Aktivitas Kuis Riil sebagai profil beban simulasi.
 
 ## 6. Manfaat
 
-**Teoritis**: bukti empiris efektivitas MAPE loop + LSTM/GRU untuk self-healing di Docker Compose; kontribusi ke ranah **AIOps**; protokol evaluasi komparatif model deep learning recurrent; referensi evaluasi fault injection.
+**Teoritis**: bukti empiris efektivitas MAPE loop + LSTM/GRU/Bi-LSTM untuk self-healing di Docker Compose; kontribusi ke ranah **AIOps**; protokol evaluasi komparatif model deep learning recurrent; referensi evaluasi fault injection.
 
 **Praktis**: solusi langsung pakai untuk IT skala menengah tanpa migrasi ke orkestrasi kompleks; blueprint arsitektur untuk tim DevOps; referensi implementasi Go+NestJS dengan self-healing; peningkatan UX lewat layanan lebih andal.
 
@@ -76,25 +76,25 @@
 **Tahap 1 — Inisialisasi**
 - Studi literatur & identifikasi research gap (jurnal Scopus 2020–2025).
 - Akuisisi dataset: Dataset Log Aktivitas Kuis Riil (293.538 baris log) yang diagregasikan ke tingkat menit (RPM) guna menyelaraskan dengan jurnal rujukan utama untuk mencegah overfitting dan mempercepat training model.
-- Perancangan arsitektur sistem terintegrasi: (i) App Services (Go & NestJS), (ii) Monitoring Stack (cAdvisor, HAProxy Exporter, dan Prometheus slim), (iii) **Dashboard Service (Golang backend dengan embedded HTML/JS frontend)** untuk monitoring real-time, visualisasi perbandingan, dan kontrol autoscaling, (iv) **The Brain (AI Engine asinkronus berbasis Python)** untuk memuat model prediksi LSTM & GRU secara aman.
+- Perancangan arsitektur sistem terintegrasi: (i) App Services (Go & NestJS), (ii) Monitoring Stack (cAdvisor, HAProxy Exporter, dan Prometheus slim), (iii) **Dashboard Service (Golang backend dengan embedded HTML/JS frontend)** untuk monitoring real-time, visualisasi perbandingan, dan kontrol autoscaling, (iv) **The Brain (AI Engine asinkronus berbasis Python)** untuk memuat model prediksi LSTM, GRU, dan Bi-LSTM secara aman.
 - Penetapan SLA kuantitatif: berdasarkan kapasitas beban kerja maksimum per kontainer ($W_{container}^{max}$) untuk menjaga latensi tetap optimal, serta evaluasi kestabilan menggunakan metrik under-provisioning ($\theta_U$) dan over-provisioning ($\theta_O$) seperti pada jurnal rujukan. Parameter mitigasi osilasi mengacu pada eksperimen Imdoukh: Cooldown Timer (CDT) = 10 detik dan Scale-Down Ratio (SDR) = 0.40 (40%).
 
 **Tahap 2 — Pra-Produksi** *(3 sprint paralel)*
 - **Sprint 1**: pra-pemrosesan data — pembersihan anomali, Min-Max Scaling, sliding window, split 80/20 (train/test). **Re-labeling** target berdasarkan rasio beban terhadap kapasitas kontainer aktif untuk mengantisipasi under-provisioning sesuai parameter kapasitas kontainer milik Imdoukh (scale_up / watch / scale_down / no_action).
-- **Sprint 2**: pelatihan dan validasi model **stacked LSTM** dan **GRU**: Model stacked LSTM dan model GRU dibangun menggunakan TensorFlow/Keras. Optimasi hyperparameter dilakukan melalui grid search untuk masing-masing model. Kualitas kedua model dievaluasi dan dibandingkan menggunakan MAE, RMSE, MAPE, serta waktu inferensi rata-rata. Model terbaik dipilih untuk diintegrasikan ke komponen The Brain.
+- **Sprint 2**: pelatihan dan validasi model **stacked LSTM**, **GRU**, dan **Bi-LSTM**: Model stacked LSTM, GRU, dan Bi-LSTM dibangun menggunakan TensorFlow/Keras. Optimasi hyperparameter dilakukan melalui grid search untuk masing-masing model. Kualitas ketiga model dievaluasi dan dibandingkan menggunakan MAE, RMSE, MAPE, serta waktu inferensi rata-rata. Model terbaik dipilih untuk diintegrasikan ke komponen The Brain.
 - **Sprint 3**: pembangunan infrastruktur Docker Compose (IaC via `docker-compose.yml`) + **Workload Injector** berbasis Python Script/Locust (membaca dataset baris per baris dan memutarnya sebagai concurrent request nyata ke Go/NestJS).
 
 **Tahap 3 — Produksi (Integrasi Sistem)**
 - Integrasi MAPE loop penuh: The Brain (REST API, prediksi N-langkah ke depan) ↔ Dashboard Service (sebagai orkestrator dan eksekutor scaling melalui Docker Engine API). Komponen decision maker (planner) menerapkan logika GDS dan CDT: jika hasil prediksi memerlukan scale-down, jumlah replika dikurangi bertahap sesuai SDR (40%) setelah CDT habis.
-- Aktivasi Workload Injection: replay pola trafik dataset, Prometheus mengumpulkan metrik real-time, LSTM/GRU membandingkan kondisi aktual vs pola dataset untuk keputusan proaktif.
+- Aktivasi Workload Injection: replay pola trafik dataset, Prometheus mengumpulkan metrik real-time, model proaktif (LSTM/GRU/Bi-LSTM) membandingkan kondisi aktual vs pola dataset untuk keputusan proaktif.
 - Pembangunan **Dashboard Service** 3 panel: **Source Profile** (identitas profil beban), **Live Comparison** (grafik aktual vs prediksi vs SLA threshold), **Healing Log** (audit trail aksi AI, mis. "02:15 AM – Predicted Spike – Scaled up auth-service to 3 instances").
 
 **Tahap 4 — Testing & Evaluasi**
 - Uji akurasi prediksi (MAE, RMSE, MAPE) pada partisi test (20%).
 - **Workload Injection Test**: 3 skenario (normal, ramp-up bertahap, spike mendadak) → ukur **TTS** & jumlah pelanggaran SLA.
 - **Fault Injection Test**: simulasi CPU spike & memory leak via **stress-ng** → validasi self-healing mencegah cascading failure.
-- **Uji Perbandingan Model Prediksi**: LSTM dan GRU dievaluasi pada partisi data pengujian (20%) yang identik untuk membandingkan performa akurasi dan waktu inferensi.
-- **Semua skenario dijalankan 2×**: sistem proaktif (LSTM/GRU) vs sistem reaktif threshold (pembanding), untuk perbandingan kuantitatif adil.
+- **Uji Perbandingan Model Prediksi**: LSTM, GRU, dan Bi-LSTM dievaluasi pada partisi data pengujian (20%) yang identik untuk membandingkan performa akurasi dan waktu inferensi.
+- **Semua skenario dijalankan 2×**: sistem proaktif (LSTM/GRU/Bi-LSTM) vs sistem reaktif threshold (pembanding), untuk perbandingan kuantitatif adil.
 - Kriteria lolos: **MAPE <10% & SLA Violation turun**; jika belum, masuk siklus tuning model/perbaikan komponen (iteratif hingga semua skenario lulus).
 
 **Tahap 5 — Analisis & Pelaporan**
@@ -107,7 +107,7 @@
 |---|---|---|
 | 1 | **App Services** | Layanan Go (I/O DB bound) & NestJS (CPU bound) sebagai kontainer ringan; menerima beban dari Locust; ekspos endpoint metrik Prometheus |
 | 2 | **Monitoring Stack** | Prometheus (slim) scraping tiap 15 detik (CPU%, memori MB, latensi HTTP ms, RPS) dari cAdvisor dan HAProxy |
-| 3 | **The Brain** | Kontainer Python (AI Engine) — memuat model stacked LSTM / GRU, mengambil data time-series dari Prometheus, menghasilkan prediksi M langkah ke depan, dan mengirimkan rekomendasi scaling |
+| 3 | **The Brain** | Kontainer Python (AI Engine) — memuat model stacked LSTM / GRU / Bi-LSTM, mengambil data time-series dari Prometheus, menghasilkan prediksi M langkah ke depan, dan mengirimkan rekomendasi scaling |
 | 4 | **Dashboard Service** | Layanan terintegrasi (Golang backend + embedded HTML/JS frontend) — menyajikan visualisasi 3 panel (Source Profile, Live Comparison, Healing Log), menerima rekomendasi dari The Brain, dan melakukan eksekusi perintah scaling via Docker Engine API secara aman |
 
 ## 8. Tinjauan Pustaka (20 Referensi Utama)
