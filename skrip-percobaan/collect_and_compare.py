@@ -41,8 +41,8 @@ def main():
     # Queries
     # Using idelta with 2s interval to capture second-by-second changes reliably
     queries = {
-        "rps_media": 'sum(idelta(haproxy_backend_http_requests_total{proxy="media_back"}[2s]))',
-        "rps_content": 'sum(idelta(haproxy_backend_http_requests_total{proxy="content_back"}[2s]))',
+        "rps_media": 'sum(rate(haproxy_backend_http_requests_total{proxy="media_back"}[5s]))',
+        "rps_content": 'sum(rate(haproxy_backend_http_requests_total{proxy="content_back"}[5s]))',
         "cpu_media": 'sum(rate(container_cpu_usage_seconds_total{container_label_com_docker_compose_service="media-service"}[2s])) * 100',
         "cpu_content": 'sum(rate(container_cpu_usage_seconds_total{container_label_com_docker_compose_service="content-service"}[2s])) * 100',
         "ram_media": 'sum(container_memory_working_set_bytes{container_label_com_docker_compose_service="media-service"}) / 1024 / 1024',
