@@ -14,25 +14,43 @@ DURATION = 300  # 5 minutes
 # Use Session to pool connections
 session = requests.Session()
 
-# Mutex and counters for statistics
+# Mutex, counters, and lists for statistics
 stats_lock = threading.Lock()
 stats = Counter()
 total_stats = Counter()
+media_latencies = []
+content_latencies = []
 
 def send_request(endpoint: str):
+    start_time = time.time()
     try:
         r = session.get(f"{BASE_URL}{endpoint}", timeout=1.5)
+        latency = (time.time() - start_time) * 1000.0
         with stats_lock:
             stats[f"{endpoint}_{r.status_code}"] += 1
             total_stats[f"{endpoint}_{r.status_code}"] += 1
+            if endpoint == "/media":
+                media_latencies.append(latency)
+            elif endpoint == "/content":
+                content_latencies.append(latency)
     except requests.exceptions.Timeout:
+        latency = (time.time() - start_time) * 1000.0
         with stats_lock:
             stats[f"{endpoint}_timeout"] += 1
             total_stats[f"{endpoint}_timeout"] += 1
+            if endpoint == "/media":
+                media_latencies.append(latency)
+            elif endpoint == "/content":
+                content_latencies.append(latency)
     except Exception as e:
+        latency = (time.time() - start_time) * 1000.0
         with stats_lock:
             stats[f"{endpoint}_error_{type(e).__name__}"] += 1
             total_stats[f"{endpoint}_error_{type(e).__name__}"] += 1
+            if endpoint == "/media":
+                media_latencies.append(latency)
+            elif endpoint == "/content":
+                content_latencies.append(latency)
 
 def report_stats():
     global stats
@@ -110,6 +128,20 @@ def main():
     success_rate = (success_requests / total_dispatched * 100) if total_dispatched > 0 else 100
     print(f"Total requests dispatched: {total_dispatched}")
     print(f"Success Rate: {success_rate:.2f}%")
+    
+    # Calculate and display P95 Latency
+    def calculate_p95(latencies):
+        if not latencies:
+            return 0.0
+        sorted_l = sorted(latencies)
+        idx = int(len(sorted_l) * 0.95)
+        idx = min(idx, len(sorted_l) - 1)
+        return sorted_l[idx]
+        
+    p95_media = calculate_p95(media_latencies)
+    p95_content = calculate_p95(content_latencies)
+    print(f"P95 Latency Media Service: {p95_media:.2f} ms")
+    print(f"P95 Latency Content Service: {p95_content:.2f} ms")
 
 if __name__ == "__main__":
     main()
