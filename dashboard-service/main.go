@@ -30,8 +30,6 @@ type MetricsPayload struct {
 	ReplicasContent float64 `json:"replicas_content"`
 	LatencyMedia    float64 `json:"latency_media"`
 	LatencyContent  float64 `json:"latency_content"`
-	SuccessMedia    float64 `json:"success_media"`
-	SuccessContent  float64 `json:"success_content"`
 }
 
 // Client represents a connected SSE client
@@ -145,8 +143,6 @@ func queryPrometheus(promURL, query string) (float64, error) {
 func collectMetrics(promURL string) MetricsPayload {
 	var payload MetricsPayload
 	payload.Timestamp = time.Now().Unix()
-	payload.SuccessMedia = 100.0
-	payload.SuccessContent = 100.0
 
 	queries := map[string]string{
 		"rps_media":        `sum(rate(haproxy_backend_http_requests_total{proxy="media_back"}[5s]))`,
@@ -159,8 +155,6 @@ func collectMetrics(promURL string) MetricsPayload {
 		"replicas_content": `count(container_last_seen{container_label_com_docker_compose_service="content-service"} > time() - 15)`,
 		"latency_media":    `sum(haproxy_backend_response_time_average_seconds{proxy="media_back"}) * 1000`,
 		"latency_content":  `sum(haproxy_backend_response_time_average_seconds{proxy="content_back"}) * 1000`,
-		"success_media":    `sum(rate(haproxy_backend_http_responses_total{proxy="media_back",code="2xx"}[5s])) / sum(rate(haproxy_backend_http_responses_total{proxy="media_back"}[5s])) * 100`,
-		"success_content":  `sum(rate(haproxy_backend_http_responses_total{proxy="content_back",code="2xx"}[5s])) / sum(rate(haproxy_backend_http_responses_total{proxy="content_back"}[5s])) * 100`,
 	}
 
 	var wg sync.WaitGroup
@@ -197,10 +191,6 @@ func collectMetrics(promURL string) MetricsPayload {
 				payload.LatencyMedia = val
 			case "latency_content":
 				payload.LatencyContent = val
-			case "success_media":
-				payload.SuccessMedia = val
-			case "success_content":
-				payload.SuccessContent = val
 			}
 			mu.Unlock()
 		}(key, query)

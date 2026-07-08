@@ -11,8 +11,11 @@ CSV_PATH = "dataset/aggregated_clarknet_rps.csv"
 PEAK_START_IDX = 401022
 DURATION = 300  # 5 minutes
 
-# Use Session to pool connections
+# Use Session to pool connections with custom pool size to support high concurrency
 session = requests.Session()
+adapter = requests.adapters.HTTPAdapter(pool_connections=1000, pool_maxsize=1000)
+session.mount('http://', adapter)
+session.mount('https://', adapter)
 
 # Mutex, counters, and lists for statistics
 stats_lock = threading.Lock()
