@@ -16,13 +16,16 @@ session.mount('https://', adapter)
 # Mutex and counters for statistics
 stats_lock = threading.Lock()
 stats = Counter()
+cycle_results = []
 
 # Simple Queue for dispatching requests
 request_queue = queue.Queue()
 
 def send_request(endpoint: str):
+    success = False
     try:
         r = session.get(f"{BASE_URL}{endpoint}", timeout=1.5)
+        success = (r.status_code == 200)
         with stats_lock:
             stats[f"{endpoint}_{r.status_code}"] += 1
     except requests.exceptions.Timeout:
@@ -31,6 +34,9 @@ def send_request(endpoint: str):
     except Exception as e:
         with stats_lock:
             stats[f"{endpoint}_error_{type(e).__name__}"] += 1
+    
+    with stats_lock:
+        cycle_results.append(success)
 
 def worker_thread():
     while True:
@@ -68,6 +74,9 @@ def main():
         cycle_start = next_cycle_start
         next_cycle_start = cycle_start + 1.0
         
+        with stats_lock:
+            cycle_results.clear()
+        
         # Combine and shuffle requests to simulate realistic mixed traffic flow
         requests_to_send = (["/media"] * media_rps) + (["/content"] * content_rps)
         random.shuffle(requests_to_send)
@@ -82,7 +91,16 @@ def main():
         if sleep_time > 0:
             time.sleep(sleep_time)
         
-        print(f"Cycle {second}/30 dispatched in {time.time() - cycle_start:.3f}s.")
+        # Briefly wait for asynchronous workers to complete remaining work for this second
+        time.sleep(0.015)
+        with stats_lock:
+            completed = len(cycle_results)
+            successes = sum(1 for x in cycle_results if x)
+            cycle_results.clear()
+            
+        cycle_success_rate = (successes / completed * 100) if completed > 0 else 100.0
+        
+        print(f"Cycle {second}/10 dispatched in {time.time() - cycle_start - 0.015:.3f}s. Success Rate: {cycle_success_rate:.2f}%")
 
     # Stop workers
     for _ in range(num_workers):
