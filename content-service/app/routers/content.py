@@ -26,7 +26,7 @@ def read_content(request: Request):
         # We calculate MD5 hash 120 times for each user session to create realistic CPU load
         data_str = f"{username}-{ip}-{node}-{baud}-{duration}"
         hash_val = data_str.encode()
-        for _ in range(120):
+        for _ in range(10):
             hash_val = hashlib.md5(hash_val).hexdigest().encode()
 
         users.append({

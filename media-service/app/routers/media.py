@@ -30,11 +30,8 @@ def read_media():
         with open(image_path, "rb") as img_file:
             img_bytes = img_file.read()
         
-        # Calculate SHA-256 hash 1 time to create a predictable CPU load
-        sha_hash = img_bytes
-        for _ in range(1):
-            sha_hash = hashlib.sha256(sha_hash).digest()
-        hash_hex = sha_hash.hex()
+        # Calculate SHA-256 hash of the filename instead of 4MB image content to save CPU resources
+        hash_hex = hashlib.sha256(selected_image.encode('utf-8')).hexdigest()
         
         # 3. Stream the file back to the client
         # Return FileResponse and set the hash in custom headers for verification
