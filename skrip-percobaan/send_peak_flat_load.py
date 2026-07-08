@@ -1,17 +1,24 @@
 import time
 import requests
-import concurrent.futures
+import queue
 import threading
+import random
 from collections import Counter
 
 BASE_URL = "http://localhost:8000"
 
-# Use Session to pool connections
+# Use Session with custom pool size to support high concurrency
 session = requests.Session()
+adapter = requests.adapters.HTTPAdapter(pool_connections=500, pool_maxsize=500)
+session.mount('http://', adapter)
+session.mount('https://', adapter)
 
 # Mutex and counters for statistics
 stats_lock = threading.Lock()
 stats = Counter()
+
+# Simple Queue for dispatching requests
+request_queue = queue.Queue()
 
 def send_request(endpoint: str):
     try:
@@ -25,44 +32,73 @@ def send_request(endpoint: str):
         with stats_lock:
             stats[f"{endpoint}_error_{type(e).__name__}"] += 1
 
+def worker_thread():
+    while True:
+        req = request_queue.get()
+        if req is None:
+            break
+        send_request(req)
+        request_queue.task_done()
+
 def main():
-    # Peak RPS stats:
-    media_rps = 37
-    content_rps = 12
+    # 3x Global Peak RPS:
+    media_rps = 111
+    content_rps = 36
     api_rps = 0 
     total_rps = media_rps + content_rps + api_rps
 
+    start_ts = int(time.time())
     print(f"Starting peak flat load test for 30 seconds...")
+    print(f"Start Epoch Timestamp: {start_ts}")
     print(f"Target RPS: {total_rps} (Media: {media_rps}, Content: {content_rps}, API: {api_rps})")
 
-    # Run for 30 cycles (30 seconds)
-    with concurrent.futures.ThreadPoolExecutor(max_workers=total_rps * 2) as executor:
-        for second in range(1, 31):
-            start_time = time.time()
-            
-            # Submit media requests
-            for _ in range(media_rps):
-                executor.submit(send_request, "/media")
-            
-            # Submit content requests
-            for _ in range(content_rps):
-                executor.submit(send_request, "/content")
-            
-            # Wait for the remainder of the second
-            elapsed = time.time() - start_time
-            sleep_time = 1.0 - elapsed
-            if sleep_time > 0:
-                time.sleep(sleep_time)
-            
-            print(f"Cycle {second}/10 dispatched.")
+    # Pre-start worker threads
+    num_workers = 300
+    workers = []
+    for _ in range(num_workers):
+        t = threading.Thread(target=worker_thread, daemon=True)
+        t.start()
+        workers.append(t)
 
+    # Absolute time tracking to prevent drift
+    next_cycle_start = time.time()
+
+    # Run for 3 cycles (3 seconds)
+    for second in range(1, 4):
+        cycle_start = next_cycle_start
+        next_cycle_start = cycle_start + 1.0
+        
+        # Combine and shuffle requests to simulate realistic mixed traffic flow
+        requests_to_send = (["/media"] * media_rps) + (["/content"] * content_rps)
+        random.shuffle(requests_to_send)
+        
+        # Queue all requests instantly (takes < 1ms)
+        for req in requests_to_send:
+            request_queue.put(req)
+        
+        # Sleep until the next absolute cycle start time (compensates for any jitter)
+        now = time.time()
+        sleep_time = next_cycle_start - now
+        if sleep_time > 0:
+            time.sleep(sleep_time)
+        
+        print(f"Cycle {second}/30 dispatched in {time.time() - cycle_start:.3f}s.")
+
+    # Stop workers
+    for _ in range(num_workers):
+        request_queue.put(None)
+    for t in workers:
+        t.join(timeout=1.0)
+
+    end_ts = int(time.time())
     # Show results
     with stats_lock:
         print("\n=== Test Results ===")
+        print(f"End Epoch Timestamp: {end_ts}")
         for key, value in stats.items():
             print(f"{key}: {value} requests")
         total_requests = sum(stats.values())
-        success_requests = stats["/media_200"] + stats["/content_200"] + stats["/api_200"]
+        success_requests = stats.get("/media_200", 0) + stats.get("/content_200", 0)
         success_rate = (success_requests / total_requests) * 100 if total_requests > 0 else 0
         print(f"Total requests dispatched: {total_requests}")
         print(f"Success Rate: {success_rate:.2f}%")
