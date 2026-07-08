@@ -52,8 +52,8 @@ def main():
     print(f"Start Epoch Timestamp: {start_ts}")
     print(f"Target RPS: {total_rps} (Media: {media_rps}, Content: {content_rps}, API: {api_rps})")
 
-    # Pre-start worker threads
-    num_workers = 300
+    # Pre-start worker threads (20 is sufficient for low-latency cached endpoints)
+    num_workers = 20
     workers = []
     for _ in range(num_workers):
         t = threading.Thread(target=worker_thread, daemon=True)
