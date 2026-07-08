@@ -30,9 +30,11 @@ skripsi-clarknet/
 ├── haproxy/                 # Konfigurasi routing load balancer HAProxy
 ├── prometheus/              # Konfigurasi target metrik database Prometheus
 ├── dataset/                 # Dataset beban kerja ClarkNet (RPS per detik)
-├── send_clarknet_load.py    # Skrip python untuk menyimulasikan beban kerja dataset ClarkNet
-├── send_peak_flat_load.py   # Skrip python untuk pengujian beban puncak konstan (stress test)
-└── collect_and_compare.py   # Skrip untuk mengekstrak data dari Prometheus menjadi CSV
+└── skrip-percobaan/         # Kumpulan skrip pengujian & pengolahan data (.py)
+    ├── send_clarknet_load.py # Skrip untuk simulasi beban kerja ClarkNet
+    ├── send_peak_5m_load.py  # Skrip untuk simulasi beban puncak 5 menit
+    ├── send_peak_flat_load.py # Skrip untuk pengujian beban puncak konstan
+    └── collect_and_compare.py # Skrip ekstrak data Prometheus ke CSV
 ```
 
 ---
@@ -65,14 +67,14 @@ Pastikan semua service merespons dengan benar:
 ### A. Menjalankan Simulasi Beban Kerja ClarkNet
 Jalankan skrip berikut untuk mulai mengirimkan trafik ke HAProxy berdasarkan data deret waktu (*time-series*) asli dari dataset ClarkNet detik-demi-detik:
 ```bash
-python3 send_clarknet_load.py
+python3 skrip-percobaan/send_clarknet_load.py
 ```
 
 ### B. Mengekstrak Metrik Menjadi Berkas CSV
 Setelah simulasi beban berjalan (misalnya selama 10 atau 15 menit), matikan generator beban dan jalankan skrip berikut untuk menarik data dari Prometheus dan mengonversinya ke format CSV siap pakai untuk AI training:
 ```bash
-# Penggunaan: python3 collect_and_compare.py <start_unix_timestamp> <end_unix_timestamp>
-python3 collect_and_compare.py 1783176375 1783177275
+# Penggunaan: python3 skrip-percobaan/collect_and_compare.py <start_unix_timestamp> <end_unix_timestamp>
+python3 skrip-percobaan/collect_and_compare.py 1783176375 1783177275
 ```
 Hasil ekstraksi akan disimpan dalam file [collected_metrics.csv](file:///home/dimas/skripsi-clarknet/collected_metrics.csv).
 

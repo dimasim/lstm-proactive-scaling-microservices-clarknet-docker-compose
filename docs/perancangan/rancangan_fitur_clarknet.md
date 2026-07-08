@@ -10,10 +10,9 @@ Berdasarkan ekstensi file (`extension`) dan HTTP method (`method`) dari log asli
 
 | Nama Layanan (Microservice) | Ekstensi / Rute Log ClarkNet | Karakteristik Beban Kerja | Perilaku Auto-Scaling |
 | :--- | :--- | :--- | :--- |
-| **1. DynamicAPI_Service** | Ekstensi `.cgi`, `.pl`, `.php` ATAU HTTP `POST` | **CPU-Heavy & Computational Bound** | Memproses logika backend dinamis (skrip CGI/Perl). Sangat sensitif terhadap load CPU karena setiap request menjalankan proses CGI baru. |
-| **2. Content_Service** | Ekstensi `.html`, `.htm`, `.txt`, `.shtml`, atau `/` (direktori) | **I/O-Heavy & Database-Bound** | Menyajikan artikel berita, petunjuk web, dokumen FAQ. Membaca data teks dari disk/database (Read-Heavy). |
-| **3. Media_Service** | Ekstensi `.gif`, `.jpg`, `.jpeg`, `.xbm`, `.png` | **Network-Heavy & Memory Bound** | Menyajikan file gambar/grafik pendukung halaman web. Merupakan request paling dominan (~75% trafik). |
-| **Others** | Ekstensi `.wav`, `.au` (Audio), `.zip`, dll. | **General / Diabaikan** | Trafik umum yang tidak dipetakan ke layanan utama. |
+| **1. Content_Service** | Ekstensi `.html`, `.htm`, `.txt`, `.shtml`, atau `/` (direktori) | **I/O-Heavy & Dynamic Rendering** | Menyajikan halaman web HTML dinamis. Membaca/menyajikan dokumen teks. |
+| **2. Media_Service** | Ekstensi `.gif`, `.jpg`, `.jpeg`, `.xbm`, `.png` | **Network-Heavy & Memory Bound** | Menyajikan file gambar/grafik pendukung halaman web. Merupakan request paling dominan (~75% trafik). |
+| **Others / Diabaikan** | Ekstensi `.cgi`, `.pl`, `.php`, `.wav`, `.au`, `.zip`, dll. | **General / Tidak Digunakan** | Trafik dinamis lama atau aset yang tidak digunakan dalam testbed terpilih. |
 
 ---
 
@@ -39,7 +38,3 @@ Berdasarkan pemrosesan log 7 hari penuh, berikut adalah metrik beban kerja per d
   * Puncak (Peak): **37.00 RPS**
 * **`Content_Service`** (Halaman HTML):
   * Puncak (Peak): **12.00 RPS**
-* **`DynamicAPI_Service`** (API Dinamis / CGI):
-  * Puncak (Peak): **3.00 RPS**
-* **`Others`** (Layanan Lainnya):
-  * Puncak (Peak): **4.00 RPS**

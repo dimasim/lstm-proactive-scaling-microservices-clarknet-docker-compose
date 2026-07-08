@@ -68,14 +68,17 @@ def main():
     print(f"Starting 5-minute peak load test (Duration: {DURATION}s)...")
     print(f"Start Epoch Timestamp: {start_ts}")
 
+    MULTIPLIER = 3
+    print(f"Traffic Multiplier: {MULTIPLIER}x")
+
     # Pre-create thread pool
-    with concurrent.futures.ThreadPoolExecutor(max_workers=500) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1000) as executor:
         for idx, row in enumerate(peak_rows):
             cycle_start = time.time()
             
             try:
-                content_rps = int(row.get("Content_Service", 0))
-                media_rps = int(row.get("Media_Service", 0))
+                content_rps = int(row.get("Content_Service", 0)) * MULTIPLIER
+                media_rps = int(row.get("Media_Service", 0)) * MULTIPLIER
             except ValueError:
                 continue
 
