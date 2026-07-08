@@ -406,8 +406,8 @@
             const targetMedia = 1.0;
 
             // Update stats cards text
-            document.getElementById('stat-rps-content').innerText = payload.rps_content.toFixed(2);
-            document.getElementById('stat-rps-media').innerText = payload.rps_media.toFixed(2);
+            document.getElementById('stat-rps-content').innerText = Math.round(payload.rps_content).toFixed(2);
+            document.getElementById('stat-rps-media').innerText = Math.round(payload.rps_media).toFixed(2);
             
             document.getElementById('stat-pred-content').innerText = predContent.toFixed(2);
             document.getElementById('stat-pred-media').innerText = predMedia.toFixed(2);
@@ -418,8 +418,8 @@
             document.getElementById('stat-cpu-ram-content').innerText = `${payload.cpu_content.toFixed(0)}% / ${payload.ram_content.toFixed(0)}M`;
             document.getElementById('stat-cpu-ram-media').innerText = `${payload.cpu_media.toFixed(0)}% / ${payload.ram_media.toFixed(0)}M`;
 
-            document.getElementById('stat-latency-content').innerText = `${payload.latency_content.toFixed(1)} ms`;
-            document.getElementById('stat-latency-media').innerText = `${payload.latency_media.toFixed(1)} ms`;
+            document.getElementById('stat-latency-content').innerText = `${payload.latency_content.toFixed(0)} ms`;
+            document.getElementById('stat-latency-media').innerText = `${payload.latency_media.toFixed(0)} ms`;
 
             // Push new data points
             if (timestamps.length >= maxDataPoints) {
