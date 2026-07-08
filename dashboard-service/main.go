@@ -145,10 +145,10 @@ func collectMetrics(promURL string) MetricsPayload {
 	payload.Timestamp = time.Now().Unix()
 
 	queries := map[string]string{
-		"rps_media":        `sum(idelta(haproxy_backend_http_requests_total{proxy="media_back"}[2s]))`,
-		"rps_content":      `sum(idelta(haproxy_backend_http_requests_total{proxy="content_back"}[2s]))`,
-		"cpu_media":        `sum(rate(container_cpu_usage_seconds_total{container_label_com_docker_compose_service="media-service"}[2s])) * 100`,
-		"cpu_content":      `sum(rate(container_cpu_usage_seconds_total{container_label_com_docker_compose_service="content-service"}[2s])) * 100`,
+		"rps_media":        `sum(rate(haproxy_backend_http_requests_total{proxy="media_back"}[10s]))`,
+		"rps_content":      `sum(rate(haproxy_backend_http_requests_total{proxy="content_back"}[10s]))`,
+		"cpu_media":        `sum(rate(container_cpu_usage_seconds_total{container_label_com_docker_compose_service="media-service"}[10s])) * 100`,
+		"cpu_content":      `sum(rate(container_cpu_usage_seconds_total{container_label_com_docker_compose_service="content-service"}[10s])) * 100`,
 		"ram_media":        `sum(container_memory_working_set_bytes{container_label_com_docker_compose_service="media-service"}) / 1024 / 1024`,
 		"ram_content":      `sum(container_memory_working_set_bytes{container_label_com_docker_compose_service="content-service"}) / 1024 / 1024`,
 		"replicas_media":   `count(container_last_seen{container_label_com_docker_compose_service="media-service"} > time() - 15)`,
@@ -166,6 +166,7 @@ func collectMetrics(promURL string) MetricsPayload {
 			defer wg.Done()
 			val, err := queryPrometheus(promURL, q)
 			if err != nil {
+				log.Printf("Error querying Prometheus for key %s: %v", k, err)
 				return
 			}
 			mu.Lock()
