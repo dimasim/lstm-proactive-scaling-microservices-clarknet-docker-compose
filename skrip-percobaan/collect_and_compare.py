@@ -5,7 +5,7 @@ import sys
 import numpy as np
 
 PROM_URL = "http://localhost:9090"
-DATASET_CSV = "dataset/aggregated_clarknet_rps.csv"
+DATASET_CSV = "dataset/aggregated_clarknet_rps_3x.csv"
 OUTPUT_CSV = "collected_metrics.csv"
 
 def query_prometheus_range(query: str, start: int, end: int, step: str = "1s"):
@@ -39,18 +39,17 @@ def main():
     print(f"Collecting Prometheus metrics from {start_ts} to {end_ts} (Duration: {duration}s)...")
 
     # Queries
-    # Using idelta with 2s interval to capture second-by-second changes reliably
     queries = {
-        "rps_media": 'sum(rate(haproxy_backend_http_requests_total{proxy="media_back"}[5s]))',
-        "rps_content": 'sum(rate(haproxy_backend_http_requests_total{proxy="content_back"}[5s]))',
+        "rps_media": 'sum(sent_rps_media)',
+        "rps_content": 'sum(sent_rps_content)',
         "cpu_media": 'sum(rate(container_cpu_usage_seconds_total{container_label_com_docker_compose_service="media-service"}[2s])) * 100',
         "cpu_content": 'sum(rate(container_cpu_usage_seconds_total{container_label_com_docker_compose_service="content-service"}[2s])) * 100',
         "ram_media": 'sum(container_memory_working_set_bytes{container_label_com_docker_compose_service="media-service"}) / 1024 / 1024',
         "ram_content": 'sum(container_memory_working_set_bytes{container_label_com_docker_compose_service="content-service"}) / 1024 / 1024',
         "replicas_media": 'count(container_last_seen{container_label_com_docker_compose_service="media-service"} > time() - 15)',
         "replicas_content": 'count(container_last_seen{container_label_com_docker_compose_service="content-service"} > time() - 15)',
-        "latency_media": 'sum(haproxy_backend_response_time_average_seconds{proxy="media_back"}) * 1000',
-        "latency_content": 'sum(haproxy_backend_response_time_average_seconds{proxy="content_back"}) * 1000'
+        "latency_media": 'histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{job="media-service"}[2s])) by (le)) * 1000',
+        "latency_content": 'histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{job="content-service"}[2s])) by (le)) * 1000'
     }
 
     # Gather data points
