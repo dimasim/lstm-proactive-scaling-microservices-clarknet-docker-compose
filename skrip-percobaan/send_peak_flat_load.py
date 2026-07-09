@@ -81,11 +81,19 @@ def main():
         requests_to_send = (["/media"] * media_rps) + (["/content"] * content_rps)
         random.shuffle(requests_to_send)
         
-        # Queue all requests instantly (takes < 1ms)
-        for req in requests_to_send:
-            request_queue.put(req)
+        # Queue requests uniformly across the 1-second cycle
+        num_reqs = len(requests_to_send)
+        if num_reqs > 0:
+            req_spacing = 1.0 / num_reqs
+            for req_idx, req in enumerate(requests_to_send):
+                target_req_time = cycle_start + (req_idx * req_spacing)
+                now = time.time()
+                sleep_for = target_req_time - now
+                if sleep_for > 0:
+                    time.sleep(sleep_for)
+                request_queue.put(req)
         
-        # Sleep until the next absolute cycle start time (compensates for any jitter)
+        # Sleep until the next absolute cycle start time to align boundaries
         now = time.time()
         sleep_time = next_cycle_start - now
         if sleep_time > 0:
