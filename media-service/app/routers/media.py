@@ -1,9 +1,31 @@
 import os
 import random
 import hashlib
+import threading
+import time
 from fastapi import APIRouter, Response
+from prometheus_client import Gauge
 
 router = APIRouter()
+
+# Thread-safe counter for actual requests processed per second
+REQUEST_COUNT = 0
+counter_lock = threading.Lock()
+
+# Custom Prometheus Gauge for exact second-by-second RPS
+RPS_GAUGE = Gauge('service_rps_actual', 'Actual requests processed in the last second')
+
+def rps_updater():
+    global REQUEST_COUNT
+    while True:
+        time.sleep(1.0)
+        with counter_lock:
+            current_count = REQUEST_COUNT
+            REQUEST_COUNT = 0
+        RPS_GAUGE.set(current_count)
+
+# Start background thread to update the gauge every second
+threading.Thread(target=rps_updater, daemon=True).start()
 
 
 # Get the path to the service root folder (media-service/)
@@ -25,6 +47,10 @@ for img_name in IMAGES:
 
 @router.get("/media")
 def read_media():
+    global REQUEST_COUNT
+    with counter_lock:
+        REQUEST_COUNT += 1
+
     selected_image = random.choice(IMAGES)
     img_bytes = CACHED_IMAGES.get(selected_image)
 
