@@ -4,6 +4,16 @@ import queue
 import threading
 import random
 from collections import Counter
+from prometheus_client import start_http_server, Gauge
+
+try:
+    start_http_server(8001)
+    print("Started Prometheus exporter on port 8001")
+except Exception as e:
+    print(f"Prometheus exporter port 8001 already bound or failed: {e}")
+
+GAUGE_MEDIA = Gauge('sent_rps_media', 'Exact sent RPS for media')
+GAUGE_CONTENT = Gauge('sent_rps_content', 'Exact sent RPS for content')
 
 BASE_URL = "http://localhost:8000"
 
@@ -69,6 +79,10 @@ def main():
             cycle_start = next_cycle_start
             next_cycle_start = cycle_start + 1.0
             
+            # Update Prometheus Gauges for exact sent RPS
+            GAUGE_MEDIA.set(media_rps)
+            GAUGE_CONTENT.set(content_rps)
+            
             with stats_lock:
                 cycle_results.clear()
             
@@ -99,6 +113,10 @@ def main():
         request_queue.put(None)
     for t in workers:
         t.join(timeout=1.0)
+
+    # Reset Gauges to 0
+    GAUGE_MEDIA.set(0.0)
+    GAUGE_CONTENT.set(0.0)
 
     end_ts = int(time.time())
     print(f"\n=== Test Completed ===")
