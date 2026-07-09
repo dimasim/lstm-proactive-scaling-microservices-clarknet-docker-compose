@@ -126,6 +126,27 @@ def main():
     print("Waiting for k6 process to finish shutdown...")
     k6_process.wait()
     print("Test Completed successfully.")
+    
+    # 6. Automatically trigger collect_and_compare.py
+    import sys
+    output_filename = sys.argv[1] if len(sys.argv) > 1 else "collected_metrics.csv"
+    print(f"\nAutomatically collecting metrics into {output_filename}...")
+    
+    # We pass the start_ts, end_ts, and dataset_start_idx (254141) to the collection script
+    collect_cmd = [
+        "python3", "skrip-percobaan/collect_and_compare.py",
+        str(start_ts), str(end_ts), "254141"
+    ]
+    
+    # Temporary swap OUTPUT_CSV in collect_and_compare.py if custom name provided
+    if output_filename != "collected_metrics.csv":
+        # Run collection and then rename the output file to the user's custom name
+        subprocess.run(collect_cmd)
+        if os.path.exists("collected_metrics.csv"):
+            os.rename("collected_metrics.csv", output_filename)
+            print(f"Dataset successfully saved as {output_filename}")
+    else:
+        subprocess.run(collect_cmd)
 
 if __name__ == "__main__":
     main()
