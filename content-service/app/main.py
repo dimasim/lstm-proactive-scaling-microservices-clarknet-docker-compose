@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from app.routers import content
+from prometheus_fastapi_instrumentator import Instrumentator
 
 app = FastAPI(
     title="ClarkNet Content Service",
@@ -9,6 +10,9 @@ app = FastAPI(
 
 # Include routers
 app.include_router(content.router)
+
+# Instrument and expose /metrics
+Instrumentator().instrument(app).expose(app)
 
 @app.get("/health")
 def health():
