@@ -69,17 +69,20 @@ export function content_request() {{
     print("Generated skrip-percobaan/k6_replay.js successfully.")
 
 def main():
-    # 1. Load dataset and extract 5 minutes (300s) centered around the peak
+    import sys
+    # Usage: python3 run_k6_test.py [output_csv] [duration_seconds] [start_index]
+    output_filename = sys.argv[1] if len(sys.argv) > 1 else "collected_metrics.csv"
+    duration = int(sys.argv[2]) if len(sys.argv) > 2 else 300
+    start_idx = int(sys.argv[3]) if len(sys.argv) > 3 else 254141 # default peak start index
+
     csv_path = "dataset/aggregated_clarknet_rps_3x.csv"
     print(f"Loading workload from {csv_path}...")
     df = pd.read_csv(csv_path)
     
-    peak_idx = 254291
-    start_idx = max(0, peak_idx - 150)
-    end_idx = min(len(df) - 1, peak_idx + 150)
+    end_idx = min(len(df) - 1, start_idx + duration)
     window_df = df.iloc[start_idx:end_idx].copy().reset_index(drop=True)
     
-    # 2. Generate k6 JS script
+    # Generate k6 JS script
     generate_k6_script(window_df)
     
     # 3. Clock-sync: wait until next integer Unix second
@@ -128,14 +131,12 @@ def main():
     print("Test Completed successfully.")
     
     # 6. Automatically trigger collect_and_compare.py
-    import sys
-    output_filename = sys.argv[1] if len(sys.argv) > 1 else "collected_metrics.csv"
     print(f"\nAutomatically collecting metrics into {output_filename}...")
     
-    # We pass the start_ts, end_ts, and dataset_start_idx (254141) to the collection script
+    # We pass the start_ts, end_ts, and dataset_start_idx to the collection script
     collect_cmd = [
         "python3", "skrip-percobaan/collect_and_compare.py",
-        str(start_ts), str(end_ts), "254141"
+        str(start_ts), str(end_ts), str(start_idx)
     ]
     
     # Temporary swap OUTPUT_CSV in collect_and_compare.py if custom name provided
