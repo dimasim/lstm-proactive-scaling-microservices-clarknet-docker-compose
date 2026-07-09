@@ -69,8 +69,8 @@ def main():
     # Absolute time tracking to prevent drift
     next_cycle_start = time.time()
 
-    # Run for 10 cycles (10 seconds)
-    for second in range(1, 11):
+    # Run for 5 cycles (5 seconds)
+    for second in range(1, 6):
         cycle_start = next_cycle_start
         next_cycle_start = cycle_start + 1.0
         
