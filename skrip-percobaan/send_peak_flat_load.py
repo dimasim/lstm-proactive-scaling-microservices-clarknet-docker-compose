@@ -4,6 +4,17 @@ import queue
 import threading
 import random
 from collections import Counter
+from prometheus_client import start_http_server, Gauge
+
+# Start Prometheus metrics exporter server on port 8001
+try:
+    start_http_server(8001)
+    print("Started Prometheus exporter on port 8001")
+except Exception as e:
+    print(f"Prometheus exporter port 8001 already bound or failed: {e}")
+
+GAUGE_MEDIA = Gauge('sent_rps_media', 'Exact sent RPS for media')
+GAUGE_CONTENT = Gauge('sent_rps_content', 'Exact sent RPS for content')
 
 BASE_URL = "http://localhost:8000"
 
@@ -54,7 +65,7 @@ def main():
     total_rps = media_rps + content_rps + api_rps
 
     start_ts = int(time.time())
-    print(f"Starting peak flat load test for 30 seconds...")
+    print(f"Starting peak flat load test for 5 minutes (300 seconds)...")
     print(f"Start Epoch Timestamp: {start_ts}")
     print(f"Target RPS: {total_rps} (Media: {media_rps}, Content: {content_rps}, API: {api_rps})")
 
@@ -69,10 +80,14 @@ def main():
     # Absolute time tracking to prevent drift
     next_cycle_start = time.time()
 
-    # Run for 5 cycles (5 seconds)
-    for second in range(1, 6):
+    # Run for 300 cycles (300 seconds / 5 minutes)
+    for second in range(1, 301):
         cycle_start = next_cycle_start
         next_cycle_start = cycle_start + 1.0
+        
+        # Update Prometheus Gauges for exact sent RPS
+        GAUGE_MEDIA.set(media_rps)
+        GAUGE_CONTENT.set(content_rps)
         
         with stats_lock:
             cycle_results.clear()
@@ -108,13 +123,17 @@ def main():
             
         cycle_success_rate = (successes / completed * 100) if completed > 0 else 100.0
         
-        print(f"Cycle {second}/10 dispatched in {time.time() - cycle_start - 0.015:.3f}s. Success Rate: {cycle_success_rate:.2f}%")
+        print(f"Cycle {second}/300 dispatched in {time.time() - cycle_start - 0.015:.3f}s. Success Rate: {cycle_success_rate:.2f}%")
 
     # Stop workers
     for _ in range(num_workers):
         request_queue.put(None)
     for t in workers:
         t.join(timeout=1.0)
+
+    # Reset Gauges to 0
+    GAUGE_MEDIA.set(0.0)
+    GAUGE_CONTENT.set(0.0)
 
     end_ts = int(time.time())
     # Show results
