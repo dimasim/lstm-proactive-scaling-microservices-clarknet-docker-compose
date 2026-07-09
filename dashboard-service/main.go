@@ -145,8 +145,8 @@ func collectMetrics(promURL string) MetricsPayload {
 	payload.Timestamp = time.Now().Unix()
 
 	queries := map[string]string{
-		"rps_media":        `sum(idelta(haproxy_backend_http_requests_total{proxy="media_back"}[2s]))`,
-		"rps_content":      `sum(idelta(haproxy_backend_http_requests_total{proxy="content_back"}[2s]))`,
+		"rps_media":        `sum(sent_rps_media)`,
+		"rps_content":      `sum(sent_rps_content)`,
 		"cpu_media":        `sum(rate(container_cpu_usage_seconds_total{container_label_com_docker_compose_service="media-service"}[2s])) * 100`,
 		"cpu_content":      `sum(rate(container_cpu_usage_seconds_total{container_label_com_docker_compose_service="content-service"}[2s])) * 100`,
 		"ram_media":        `sum(container_memory_working_set_bytes{container_label_com_docker_compose_service="media-service"}) / 1024 / 1024`,
