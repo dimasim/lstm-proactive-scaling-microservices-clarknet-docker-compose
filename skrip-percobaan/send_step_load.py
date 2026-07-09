@@ -62,8 +62,8 @@ def main():
         t.start()
         workers.append(t)
 
-    # Define steps dynamically: 5 to 100 RPS in steps of 5, each for 1 second
-    steps = [(i, i, 1) for i in range(5, 101, 5)]
+    # Define steps dynamically: 3 to 99 RPS in steps of 3, each for 1 second
+    steps = [(i, i, 1) for i in range(3, 100, 3)]
 
     start_ts = int(time.time())
     print("Starting step load test...")
