@@ -153,8 +153,8 @@ func collectMetrics(promURL string) MetricsPayload {
 		"ram_content":      `sum(container_memory_working_set_bytes{container_label_com_docker_compose_service="content-service"}) / 1024 / 1024`,
 		"replicas_media":   `count(container_last_seen{container_label_com_docker_compose_service="media-service"} > time() - 15)`,
 		"replicas_content": `count(container_last_seen{container_label_com_docker_compose_service="content-service"} > time() - 15)`,
-		"latency_media":    `histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{container_label_com_docker_compose_service="media-service"}[2s])) by (le)) * 1000`,
-		"latency_content":  `histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{container_label_com_docker_compose_service="content-service"}[2s])) by (le)) * 1000`,
+		"latency_media":    `histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{job="media-service"}[2s])) by (le)) * 1000`,
+		"latency_content":  `histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{job="content-service"}[2s])) by (le)) * 1000`,
 	}
 
 	var wg sync.WaitGroup
