@@ -1,27 +1,51 @@
 version: '3.8'
 
 services:
-  haproxy:
+  haproxy-a:
     image: haproxy:2.8-alpine
-    container_name: haproxy
+    container_name: haproxy-a
     ports:
-      - "${HAPROXY_PORT_HTTP}:80"
+      - "8000:80"
     volumes:
-      - ./haproxy/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+      - ./haproxy/haproxy-a.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
     depends_on:
-      - media-service
-      - content-service
+      - media-service-a
+      - content-service-a
 
-  media-service:
+  haproxy-b:
+    image: haproxy:2.8-alpine
+    container_name: haproxy-b
+    ports:
+      - "8001:80"
+    volumes:
+      - ./haproxy/haproxy-b.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+    depends_on:
+      - media-service-b
+      - content-service-b
+
+  media-service-a:
     build:
       context: ./media-service
     image: media-service:latest
+    container_name: media-service-a
 
-  content-service:
+  media-service-b:
+    build:
+      context: ./media-service
+    image: media-service:latest
+    container_name: media-service-b
+
+  content-service-a:
     build:
       context: ./content-service
     image: content-service:latest
+    container_name: content-service-a
 
+  content-service-b:
+    build:
+      context: ./content-service
+    image: content-service:latest
+    container_name: content-service-b
 
   cadvisor:
     image: ghcr.io/google/cadvisor:latest
@@ -51,21 +75,11 @@ services:
       - '--storage.tsdb.path=/prometheus'
       - '--storage.tsdb.retention.time=3d'
     ports:
-      - "${PROMETHEUS_PORT}:9090"
+      - "9090:9090"
     depends_on:
       - cadvisor
-      - haproxy
-
-  locust:
-    image: locustio/locust
-    container_name: locust
-    ports:
-      - "${LOCUST_PORT}:8089"
-    volumes:
-      - ./locust:/mnt/locust
-    command: -f /mnt/locust/locustfile.py --host http://haproxy
-    depends_on:
-      - haproxy
+      - haproxy-a
+      - haproxy-b
 
   dashboard-service:
     build:
@@ -78,5 +92,3 @@ services:
       - PORT=3002
     depends_on:
       - prometheus
-
-
