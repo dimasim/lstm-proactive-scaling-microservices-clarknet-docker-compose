@@ -56,7 +56,8 @@ def collect_set_metrics(suffix, start_ts, end_ts, duration, dataset_start_idx):
                 except ValueError:
                     val_float = 0.0
                 
-                idx = ts - start_ts
+                # Compensate for the 1-second Prometheus scrape delay / phase shift
+                idx = ts - start_ts - 1
                 if 0 <= idx < duration:
                     series_data[key][idx] = val_float
 
