@@ -9,21 +9,37 @@ DATASET_CSV = "dataset/aggregated_clarknet_rps_3x.csv"
 OUTPUT_CSV = "collected_metrics.csv"
 
 def query_prometheus_range(query: str, start: int, end: int, step: str = "1s"):
-    url = f"{PROM_URL}/api/v1/query_range"
-    params = {
-        "query": query,
-        "start": start,
-        "end": end,
-        "step": step
-    }
-    try:
-        r = requests.get(url, params=params, timeout=10)
-        if r.status_code == 200:
-            result = r.json()
-            if result.get("status") == "success":
-                return result["data"]["result"]
-    except Exception as e:
-        print(f"Error querying Prometheus: {e}")
+    # Prometheus limits query range to 11,000 data points.
+    # We query in chunks of 2 hours (7200 seconds) to bypass this limit.
+    chunk_size = 7200
+    all_values = []
+    
+    current_start = start
+    while current_start < end:
+        current_end = min(end, current_start + chunk_size)
+        url = f"{PROM_URL}/api/v1/query_range"
+        params = {
+            "query": query,
+            "start": current_start,
+            "end": current_end,
+            "step": step
+        }
+        try:
+            r = requests.get(url, params=params, timeout=15)
+            if r.status_code == 200:
+                result = r.json()
+                if result.get("status") == "success" and result["data"]["result"]:
+                    # Append values from this chunk
+                    all_values.extend(result["data"]["result"][0].get("values", []))
+        except Exception as e:
+            print(f"Error querying Prometheus chunk ({current_start} - {current_end}): {e}")
+        
+        current_start = current_end
+        # Sleep briefly to avoid hammering Prometheus
+        time.sleep(0.1)
+        
+    if all_values:
+        return [{"values": all_values}]
     return []
 
 def main():

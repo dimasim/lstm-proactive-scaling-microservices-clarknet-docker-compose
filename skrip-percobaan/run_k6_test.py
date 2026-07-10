@@ -88,6 +88,8 @@ def main():
     # 3. Clock-sync: wait until next integer Unix second
     now = time.time()
     sync_ts = int(now) + 2
+    start_ts = sync_ts
+    end_ts = sync_ts + duration
     sleep_time = sync_ts - now
     print(f"Aligning clocks. Sleeping for {sleep_time:.4f}s to start at Unix Epoch {sync_ts}...")
     time.sleep(sleep_time)
@@ -114,7 +116,7 @@ def main():
         GAUGE_CONTENT.set(content_rps)
         
         if (second + 1) % 10 == 0 or second == 0:
-            print(f"Cycle {second+1}/300: Dispatching {media_rps + content_rps} RPS (M:{media_rps}, C:{content_rps}) via k6")
+            print(f"Cycle {second+1}/{duration}: Dispatching {media_rps + content_rps} RPS (M:{media_rps}, C:{content_rps}) via k6")
             
         # Wait for next second boundary
         now = time.time()
