@@ -36,6 +36,12 @@ def read_content(request: Request):
     # Simulate a lightweight billing check
     hash_val = hashlib.md5(b"billing_check").hexdigest()
 
+    # Simulate mild dynamic memory overhead per request (e.g. session/parsing buffer)
+    # 600 KB per request creates a visible but safe RAM delta >100MB under concurrency
+    temp_buffer = bytearray(600 * 1024)
+    temp_buffer[0] = 1
+    temp_buffer[-1] = 1
+
     # Server-Side Render the clarknet.html template using cached sorted data
     return templates.TemplateResponse(
         request=request,

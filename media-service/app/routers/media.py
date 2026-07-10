@@ -29,6 +29,12 @@ def read_media():
     img_bytes = CACHED_IMAGES.get(selected_image)
 
     if img_bytes:
+        # Simulate mild dynamic memory overhead per request (e.g. image processing buffer)
+        # 900 KB per request creates a visible but safe RAM delta >100MB under concurrency
+        temp_buffer = bytearray(900 * 1024)
+        temp_buffer[0] = 1
+        temp_buffer[-1] = 1
+
         # Calculate SHA-256 hash of the filename instead of 4MB image content to save CPU resources
         hash_hex = hashlib.sha256(selected_image.encode('utf-8')).hexdigest()
         
