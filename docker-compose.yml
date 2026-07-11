@@ -23,6 +23,17 @@ services:
       - media-service-b
       - content-service-b
 
+  haproxy-c:
+    image: haproxy:2.8-alpine
+    container_name: haproxy-c
+    ports:
+      - "8002:80"
+    volumes:
+      - ./haproxy/haproxy-c.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+    depends_on:
+      - media-service-c
+      - content-service-c
+
   media-service-a:
     build:
       context: ./media-service
@@ -35,6 +46,12 @@ services:
     image: media-service:latest
     container_name: media-service-b
 
+  media-service-c:
+    build:
+      context: ./media-service
+    image: media-service:latest
+    container_name: media-service-c
+
   content-service-a:
     build:
       context: ./content-service
@@ -46,6 +63,12 @@ services:
       context: ./content-service
     image: content-service:latest
     container_name: content-service-b
+
+  content-service-c:
+    build:
+      context: ./content-service
+    image: content-service:latest
+    container_name: content-service-c
 
   cadvisor:
     image: ghcr.io/google/cadvisor:latest
@@ -80,6 +103,7 @@ services:
       - cadvisor
       - haproxy-a
       - haproxy-b
+      - haproxy-c
 
   dashboard-service:
     build:

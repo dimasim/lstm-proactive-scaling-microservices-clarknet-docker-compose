@@ -20,13 +20,14 @@ def generate_k6_script(window_df, suffix, port):
 import http from 'k6/http';
 
 export const options = {{
+  discardResponseBodies: true,
   scenarios: {{
     media_scenario: {{
       executor: 'ramping-arrival-rate',
       startRate: 0,
       timeUnit: '1s',
-      preAllocatedVUs: 150,
-      maxVUs: 400,
+      preAllocatedVUs: 10,
+      maxVUs: 50,
       stages: [
         {",\n        ".join(media_stages)}
       ],
@@ -36,8 +37,8 @@ export const options = {{
       executor: 'ramping-arrival-rate',
       startRate: 0,
       timeUnit: '1s',
-      preAllocatedVUs: 50,
-      maxVUs: 150,
+      preAllocatedVUs: 5,
+      maxVUs: 20,
       stages: [
         {",\n        ".join(content_stages)}
       ],
@@ -60,11 +61,14 @@ export function content_request() {{
     print(f"Generated {filename} successfully.")
 
 def main():
-    # Usage: python3 run_parallel_k6.py [duration_seconds] [start_idx_a] [start_idx_b]
-    duration = int(sys.argv[1]) if len(sys.argv) > 1 else 300
-    start_idx_a = int(sys.argv[2]) if len(sys.argv) > 2 else 0
-    # Default Week 2 starts exactly 1 week (604800 seconds) after Week 1
-    start_idx_b = int(sys.argv[3]) if len(sys.argv) > 3 else 604800
+    # Usage: python3 run_parallel_k6.py [duration_seconds] [start_idx_a] [start_idx_b] [start_idx_c]
+    duration = int(sys.argv[1]) if len(sys.argv) > 1 else 15
+    # Day 7 of Week 1 starts at index 518400
+    start_idx_a = int(sys.argv[2]) if len(sys.argv) > 2 else 518400
+    # Day 2 of Week 2 starts at index 691200
+    start_idx_b = int(sys.argv[3]) if len(sys.argv) > 3 else 691200
+    # Day 5 of Week 2 starts at index 950400
+    start_idx_c = int(sys.argv[4]) if len(sys.argv) > 4 else 950400
 
     # Start independent Prometheus exporters
     reg_a = CollectorRegistry()
@@ -79,11 +83,18 @@ def main():
     start_http_server(8012, registry=reg_b)
     print("Started Prometheus exporter B on port 8012")
 
-    csv_path = "dataset/aggregated_clarknet_rps_3x.csv"
-    print(f"Loading workload from {csv_path}...")
+    reg_c = CollectorRegistry()
+    gauge_media_c = Gauge('sent_rps_media', 'Exact sent RPS for media', registry=reg_c)
+    gauge_content_c = Gauge('sent_rps_content', 'Exact sent RPS for content', registry=reg_c)
+    start_http_server(8013, registry=reg_c)
+    print("Started Prometheus exporter C on port 8013")
+
+    csv_path_w1 = "dataset/aggregated_clarknet_rps_3x.csv"
+    csv_path_w2 = "dataset/aggregated_clarknet_rps_week2_3x.csv"
+    print(f"Loading workloads from {csv_path_w1} and {csv_path_w2}...")
     
     rows = []
-    with open(csv_path, 'r', encoding='utf-8') as f:
+    with open(csv_path_w1, 'r', encoding='utf-8') as f:
         reader = csv.DictReader(f)
         for row in reader:
             rows.append({
@@ -91,13 +102,30 @@ def main():
                 "Content_Service": int(row["Content_Service"])
             })
 
+    with open(csv_path_w2, 'r', encoding='utf-8') as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            rows.append({
+                "Media_Service": int(row["Media_Service"]),
+                "Content_Service": int(row["Content_Service"])
+            })
+
+    # Helper to slice safely
+    def get_slice(data, start, size):
+        res = data[start:start + size]
+        if len(res) < size:
+            res += [{"Media_Service": 0, "Content_Service": 0}] * (size - len(res))
+        return res
+
     # Slice windows
-    window_a = rows[start_idx_a:start_idx_a + duration]
-    window_b = rows[start_idx_b:start_idx_b + duration]
+    window_a = get_slice(rows, start_idx_a, duration)
+    window_b = get_slice(rows, start_idx_b, duration)
+    window_c = get_slice(rows, start_idx_c, duration)
 
     # Generate scripts
     generate_k6_script(window_a, "a", 8000)
     generate_k6_script(window_b, "b", 8001)
+    generate_k6_script(window_c, "c", 8002)
 
     # Clock synchronization
     now = time.time()
@@ -106,7 +134,7 @@ def main():
     print(f"Aligning clocks. Sleeping for {sleep_time:.4f}s to start at Unix Epoch {sync_ts}...")
     time.sleep(sleep_time)
 
-    # Spawn both k6 processes
+    # Spawn three k6 processes
     print("Spawning parallel k6 load generators...")
     k6_a = subprocess.Popen(
         ["./k6", "run", "skrip-percobaan/k6_replay_a.js"],
@@ -114,6 +142,10 @@ def main():
     )
     k6_b = subprocess.Popen(
         ["./k6", "run", "skrip-percobaan/k6_replay_b.js"],
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+    )
+    k6_c = subprocess.Popen(
+        ["./k6", "run", "skrip-percobaan/k6_replay_c.js"],
         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
     )
 
@@ -126,21 +158,26 @@ def main():
         next_cycle_start = cycle_start + 1.0
 
         # Load values
-        m_a = window_a[second]["Media_Service"] if second < len(window_a) else 0
-        c_a = window_a[second]["Content_Service"] if second < len(window_a) else 0
-        m_b = window_b[second]["Media_Service"] if second < len(window_b) else 0
-        c_b = window_b[second]["Content_Service"] if second < len(window_b) else 0
+        m_a = window_a[second]["Media_Service"]
+        c_a = window_a[second]["Content_Service"]
+        m_b = window_b[second]["Media_Service"]
+        c_b = window_b[second]["Content_Service"]
+        m_c = window_c[second]["Media_Service"]
+        c_c = window_c[second]["Content_Service"]
 
         # Set Gauges
         gauge_media_a.set(m_a)
         gauge_content_a.set(c_a)
         gauge_media_b.set(m_b)
         gauge_content_b.set(c_b)
+        gauge_media_c.set(m_c)
+        gauge_content_c.set(c_c)
 
         if (second + 1) % 10 == 0 or second == 0:
             print(f"Cycle {second+1}/{duration}:")
             print(f"  - Bot A: Media={m_a}, Content={c_a}")
             print(f"  - Bot B: Media={m_b}, Content={c_b}")
+            print(f"  - Bot C: Media={m_c}, Content={c_c}")
 
         # Wait for next second boundary
         now = time.time()
@@ -153,17 +190,20 @@ def main():
     gauge_content_a.set(0.0)
     gauge_media_b.set(0.0)
     gauge_content_b.set(0.0)
+    gauge_media_c.set(0.0)
+    gauge_content_c.set(0.0)
 
     print("Waiting for k6 processes to shut down...")
     k6_a.wait()
     k6_b.wait()
+    k6_c.wait()
     print("Parallel Load Test Completed successfully.")
 
     # Automatically call metrics collector
     print("\nTriggering parallel metrics extraction...")
     collect_cmd = [
         "python3", "skrip-percobaan/collect_parallel_metrics.py",
-        str(start_time), str(end_time), str(start_idx_a), str(start_idx_b)
+        str(start_time), str(end_time), str(start_idx_a), str(start_idx_b), str(start_idx_c)
     ]
     subprocess.run(collect_cmd)
 

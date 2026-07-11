@@ -80,21 +80,29 @@ def collect_set_metrics(suffix, start_ts, end_ts, duration, dataset_start_idx):
             ])
 
     # Compare with dataset
-    print(f"Reading original dataset from {DATASET_CSV} to compare...")
+    print(f"Reading original datasets to compare...")
     orig_media_rps = []
     orig_content_rps = []
     
-    with open(DATASET_CSV, mode='r', encoding='utf-8') as f:
+    rows = []
+    csv_path_w1 = "dataset/aggregated_clarknet_rps_3x.csv"
+    csv_path_w2 = "dataset/aggregated_clarknet_rps_week2_3x.csv"
+    with open(csv_path_w1, mode='r', encoding='utf-8') as f:
         reader = csv.DictReader(f)
-        count = 0
-        for idx, row in enumerate(reader):
-            if idx < dataset_start_idx:
-                continue
-            if count >= duration:
-                break
-            orig_media_rps.append(int(row.get("Media_Service", 0)))
-            orig_content_rps.append(int(row.get("Content_Service", 0)))
-            count += 1
+        for row in reader:
+            rows.append(row)
+    with open(csv_path_w2, mode='r', encoding='utf-8') as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            rows.append(row)
+
+    for idx in range(dataset_start_idx, dataset_start_idx + duration):
+        if idx < len(rows):
+            orig_media_rps.append(int(rows[idx].get("Media_Service", 0)))
+            orig_content_rps.append(int(rows[idx].get("Content_Service", 0)))
+        else:
+            orig_media_rps.append(0)
+            orig_content_rps.append(0)
 
     prom_media = series_data["rps_media"]
     prom_content = series_data["rps_content"]
@@ -120,8 +128,8 @@ def collect_set_metrics(suffix, start_ts, end_ts, duration, dataset_start_idx):
     print(f"  - Match Accuracy: {accuracy_content:.2f}%")
 
 def main():
-    if len(sys.argv) < 5:
-        print("Usage: python3 collect_parallel_metrics.py <start_unix_timestamp> <end_unix_timestamp> <dataset_start_idx_a> <dataset_start_idx_b>")
+    if len(sys.argv) < 6:
+        print("Usage: python3 collect_parallel_metrics.py <start_unix_timestamp> <end_unix_timestamp> <dataset_start_idx_a> <dataset_start_idx_b> <dataset_start_idx_c>")
         return
 
     start_ts = int(sys.argv[1])
@@ -129,9 +137,11 @@ def main():
     duration = end_ts - start_ts
     dataset_start_idx_a = int(sys.argv[3])
     dataset_start_idx_b = int(sys.argv[4])
+    dataset_start_idx_c = int(sys.argv[5])
 
     collect_set_metrics("a", start_ts, end_ts, duration, dataset_start_idx_a)
     collect_set_metrics("b", start_ts, end_ts, duration, dataset_start_idx_b)
+    collect_set_metrics("c", start_ts, end_ts, duration, dataset_start_idx_c)
     print("\nAll parallel CSV extractions completed successfully!")
 
 if __name__ == "__main__":

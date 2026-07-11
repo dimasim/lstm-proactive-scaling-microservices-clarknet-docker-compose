@@ -43,3 +43,6 @@ locust/*.csv
 # Experiment Outputs & Generated Scripts
 collected_metrics*.csv
 skrip-percobaan/k6_replay*.js
+
+# Datasets raw logs
+dataset/clarknet_access_log*
