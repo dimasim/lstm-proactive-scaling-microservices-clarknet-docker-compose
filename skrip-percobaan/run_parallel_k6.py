@@ -6,15 +6,21 @@ import threading
 import csv
 from prometheus_client import CollectorRegistry, Gauge, start_http_server
 
-def generate_k6_script(window_df, suffix, port):
+def generate_k6_script(window_df, suffix, port, interval=10):
     media_stages = []
     content_stages = []
     
-    for row in window_df:
-        m_rps = int(row["Media_Service"])
-        c_rps = int(row["Content_Service"])
-        media_stages.append(f"{{ target: {m_rps}, duration: '1s' }}")
-        content_stages.append(f"{{ target: {c_rps}, duration: '1s' }}")
+    for i in range(0, len(window_df), interval):
+        chunk = window_df[i:i+interval]
+        if not chunk:
+            continue
+        avg_m = sum(row["Media_Service"] for row in chunk) / len(chunk)
+        avg_c = sum(row["Content_Service"] for row in chunk) / len(chunk)
+        m_rps = int(round(avg_m))
+        c_rps = int(round(avg_c))
+        duration_sec = len(chunk)
+        media_stages.append(f"{{ target: {m_rps}, duration: '{duration_sec}s' }}")
+        content_stages.append(f"{{ target: {c_rps}, duration: '{duration_sec}s' }}")
         
     js_content = f"""
 import http from 'k6/http';
@@ -70,14 +76,20 @@ def main():
     reg_a = CollectorRegistry()
     gauge_media_a = Gauge('sent_rps_media', 'Exact sent RPS for media', registry=reg_a)
     gauge_content_a = Gauge('sent_rps_content', 'Exact sent RPS for content', registry=reg_a)
-    start_http_server(8011, registry=reg_a)
-    print("Started Prometheus exporter A on port 8011")
+    try:
+        start_http_server(8011, registry=reg_a)
+        print("Started Prometheus exporter A on port 8011")
+    except Exception as e:
+        print(f"Prometheus exporter A port 8011 already bound or failed: {e}")
 
     reg_b = CollectorRegistry()
     gauge_media_b = Gauge('sent_rps_media', 'Exact sent RPS for media', registry=reg_b)
     gauge_content_b = Gauge('sent_rps_content', 'Exact sent RPS for content', registry=reg_b)
-    start_http_server(8012, registry=reg_b)
-    print("Started Prometheus exporter B on port 8012")
+    try:
+        start_http_server(8012, registry=reg_b)
+        print("Started Prometheus exporter B on port 8012")
+    except Exception as e:
+        print(f"Prometheus exporter B port 8012 already bound or failed: {e}")
 
     csv_path = "dataset/aggregated_clarknet_rps_3x.csv"
     print(f"Loading workload from {csv_path}...")
@@ -96,8 +108,9 @@ def main():
     window_b = rows[start_idx_b:start_idx_b + duration]
 
     # Generate scripts
-    generate_k6_script(window_a, "a", 8000)
-    generate_k6_script(window_b, "b", 8001)
+    INTERVAL_SEC = 10
+    generate_k6_script(window_a, "a", 8000, INTERVAL_SEC)
+    generate_k6_script(window_b, "b", 8001, INTERVAL_SEC)
 
     # Clock synchronization
     now = time.time()

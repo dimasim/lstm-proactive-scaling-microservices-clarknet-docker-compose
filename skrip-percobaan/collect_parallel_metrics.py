@@ -34,8 +34,8 @@ def collect_set_metrics(suffix, start_ts, end_ts, duration, dataset_start_idx):
         "rps_content": f'sum(sent_rps_content{{job="load-generator-{suffix}"}})',
         "cpu_media": f'sum(rate(container_cpu_usage_seconds_total{{container_label_com_docker_compose_service="media-service-{suffix}"}}[2s])) * 100',
         "cpu_content": f'sum(rate(container_cpu_usage_seconds_total{{container_label_com_docker_compose_service="content-service-{suffix}"}}[2s])) * 100',
-        "ram_media": f'sum(container_memory_working_set_bytes{{container_label_com_docker_compose_service="media-service-{suffix}"}}) / 1024 / 1024',
-        "ram_content": f'sum(container_memory_working_set_bytes{{container_label_com_docker_compose_service="content-service-{suffix}"}}) / 1024 / 1024',
+        "ram_media": f'sum(container_memory_working_set_bytes{{container_label_com_docker_compose_service="media-service-{suffix}"}} and on(id) (container_last_seen > time() - 15)) / 1024 / 1024',
+        "ram_content": f'sum(container_memory_working_set_bytes{{container_label_com_docker_compose_service="content-service-{suffix}"}} and on(id) (container_last_seen > time() - 15)) / 1024 / 1024',
         "replicas_media": f'count(container_last_seen{{container_label_com_docker_compose_service="media-service-{suffix}"}} > time() - 15)',
         "replicas_content": f'count(container_last_seen{{container_label_com_docker_compose_service="content-service-{suffix}"}} > time() - 15)',
         "latency_media": f'histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{{job="media-service-{suffix}"}}[2s])) by (le)) * 1000',
@@ -67,16 +67,16 @@ def collect_set_metrics(suffix, start_ts, end_ts, duration, dataset_start_idx):
         for idx in range(duration):
             writer.writerow([
                 start_ts + idx,
-                series_data["rps_media"][idx],
-                series_data["rps_content"][idx],
-                series_data["cpu_media"][idx],
-                series_data["cpu_content"][idx],
-                series_data["ram_media"][idx],
-                series_data["ram_content"][idx],
-                series_data["replicas_media"][idx],
-                series_data["replicas_content"][idx],
-                series_data["latency_media"][idx],
-                series_data["latency_content"][idx]
+                f"{series_data['rps_media'][idx]:.2f}",
+                f"{series_data['rps_content'][idx]:.2f}",
+                f"{series_data['cpu_media'][idx]:.2f}",
+                f"{series_data['cpu_content'][idx]:.2f}",
+                f"{series_data['ram_media'][idx]:.2f}",
+                f"{series_data['ram_content'][idx]:.2f}",
+                f"{series_data['replicas_media'][idx]:.2f}",
+                f"{series_data['replicas_content'][idx]:.2f}",
+                f"{series_data['latency_media'][idx]:.2f}",
+                f"{series_data['latency_content'][idx]:.2f}"
             ])
 
     # Compare with dataset

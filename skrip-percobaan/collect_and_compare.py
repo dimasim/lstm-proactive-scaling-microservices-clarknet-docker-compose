@@ -42,14 +42,14 @@ def main():
     queries = {
         "rps_media": 'sum(sent_rps_media)',
         "rps_content": 'sum(sent_rps_content)',
-        "cpu_media": 'sum(rate(container_cpu_usage_seconds_total{container_label_com_docker_compose_service="media-service"}[2s])) * 100',
-        "cpu_content": 'sum(rate(container_cpu_usage_seconds_total{container_label_com_docker_compose_service="content-service"}[2s])) * 100',
-        "ram_media": 'sum(container_memory_working_set_bytes{container_label_com_docker_compose_service="media-service"}) / 1024 / 1024',
-        "ram_content": 'sum(container_memory_working_set_bytes{container_label_com_docker_compose_service="content-service"}) / 1024 / 1024',
-        "replicas_media": 'count(container_last_seen{container_label_com_docker_compose_service="media-service"} > time() - 15)',
-        "replicas_content": 'count(container_last_seen{container_label_com_docker_compose_service="content-service"} > time() - 15)',
-        "latency_media": 'histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{job="media-service"}[2s])) by (le)) * 1000',
-        "latency_content": 'histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{job="content-service"}[2s])) by (le)) * 1000'
+        "cpu_media": 'sum(rate(container_cpu_usage_seconds_total{container_label_com_docker_compose_service=~"media-service.*"}[2s])) * 100',
+        "cpu_content": 'sum(rate(container_cpu_usage_seconds_total{container_label_com_docker_compose_service=~"content-service.*"}[2s])) * 100',
+        "ram_media": 'sum(container_memory_working_set_bytes{container_label_com_docker_compose_service=~"media-service.*"} and on(id) (container_last_seen > time() - 15)) / 1024 / 1024',
+        "ram_content": 'sum(container_memory_working_set_bytes{container_label_com_docker_compose_service=~"content-service.*"} and on(id) (container_last_seen > time() - 15)) / 1024 / 1024',
+        "replicas_media": 'count(container_last_seen{container_label_com_docker_compose_service=~"media-service.*"} > time() - 15)',
+        "replicas_content": 'count(container_last_seen{container_label_com_docker_compose_service=~"content-service.*"} > time() - 15)',
+        "latency_media": 'histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{job=~"media-service.*"}[2s])) by (le)) * 1000',
+        "latency_content": 'histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{job=~"content-service.*"}[2s])) by (le)) * 1000'
     }
 
     # Gather data points
@@ -82,16 +82,16 @@ def main():
         for idx in range(duration):
             writer.writerow([
                 start_ts + idx,
-                series_data["rps_media"][idx],
-                series_data["rps_content"][idx],
-                series_data["cpu_media"][idx],
-                series_data["cpu_content"][idx],
-                series_data["ram_media"][idx],
-                series_data["ram_content"][idx],
-                series_data["replicas_media"][idx],
-                series_data["replicas_content"][idx],
-                series_data["latency_media"][idx],
-                series_data["latency_content"][idx]
+                f"{series_data['rps_media'][idx]:.2f}",
+                f"{series_data['rps_content'][idx]:.2f}",
+                f"{series_data['cpu_media'][idx]:.2f}",
+                f"{series_data['cpu_content'][idx]:.2f}",
+                f"{series_data['ram_media'][idx]:.2f}",
+                f"{series_data['ram_content'][idx]:.2f}",
+                f"{series_data['replicas_media'][idx]:.2f}",
+                f"{series_data['replicas_content'][idx]:.2f}",
+                f"{series_data['latency_media'][idx]:.2f}",
+                f"{series_data['latency_content'][idx]:.2f}"
             ])
 
     # Compare with dataset

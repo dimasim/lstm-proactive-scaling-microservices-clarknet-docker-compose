@@ -88,6 +88,7 @@ def main():
     # 3. Clock-sync: wait until next integer Unix second
     now = time.time()
     sync_ts = int(now) + 2
+    start_ts = sync_ts
     sleep_time = sync_ts - now
     print(f"Aligning clocks. Sleeping for {sleep_time:.4f}s to start at Unix Epoch {sync_ts}...")
     time.sleep(sleep_time)
@@ -129,6 +130,8 @@ def main():
     print("Waiting for k6 process to finish shutdown...")
     k6_process.wait()
     print("Test Completed successfully.")
+    
+    end_ts = int(time.time())
     
     # 6. Automatically trigger collect_and_compare.py
     print(f"\nAutomatically collecting metrics into {output_filename}...")
