@@ -134,56 +134,80 @@ def main():
     print(f"Aligning clocks. Sleeping for {sleep_time:.4f}s to start at Unix Epoch {sync_ts}...")
     time.sleep(sleep_time)
 
-    # Spawn three k6 processes
-    print("Spawning parallel k6 load generators...")
-    k6_a = subprocess.Popen(
-        ["./k6", "run", "skrip-percobaan/k6_replay_a.js"],
-        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
-    )
-    k6_b = subprocess.Popen(
-        ["./k6", "run", "skrip-percobaan/k6_replay_b.js"],
-        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
-    )
-    k6_c = subprocess.Popen(
-        ["./k6", "run", "skrip-percobaan/k6_replay_c.js"],
-        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
-    )
-
     start_time = sync_ts
     end_time = sync_ts + duration
 
-    next_cycle_start = float(sync_ts)
-    for second in range(duration):
-        cycle_start = next_cycle_start
-        next_cycle_start = cycle_start + 1.0
+    # We chunk the duration into 1-hour segments to prevent k6 memory issues
+    chunk_size = 3600
+    num_chunks = (duration + chunk_size - 1) // chunk_size
 
-        # Load values
-        m_a = window_a[second]["Media_Service"]
-        c_a = window_a[second]["Content_Service"]
-        m_b = window_b[second]["Media_Service"]
-        c_b = window_b[second]["Content_Service"]
-        m_c = window_c[second]["Media_Service"]
-        c_c = window_c[second]["Content_Service"]
+    for chunk_idx in range(num_chunks):
+        chunk_offset = chunk_idx * chunk_size
+        current_chunk_duration = min(chunk_size, duration - chunk_offset)
 
-        # Set Gauges
-        gauge_media_a.set(m_a)
-        gauge_content_a.set(c_a)
-        gauge_media_b.set(m_b)
-        gauge_content_b.set(c_b)
-        gauge_media_c.set(m_c)
-        gauge_content_c.set(c_c)
+        # Slice windows for this chunk
+        window_a_chunk = window_a[chunk_offset:chunk_offset + current_chunk_duration]
+        window_b_chunk = window_b[chunk_offset:chunk_offset + current_chunk_duration]
+        window_c_chunk = window_c[chunk_offset:chunk_offset + current_chunk_duration]
 
-        if (second + 1) % 10 == 0 or second == 0:
-            print(f"Cycle {second+1}/{duration}:")
-            print(f"  - Bot A: Media={m_a}, Content={c_a}")
-            print(f"  - Bot B: Media={m_b}, Content={c_b}")
-            print(f"  - Bot C: Media={m_c}, Content={c_c}")
+        # Generate scripts for this chunk
+        generate_k6_script(window_a_chunk, "a", 8000)
+        generate_k6_script(window_b_chunk, "b", 8001)
+        generate_k6_script(window_c_chunk, "c", 8002)
 
-        # Wait for next second boundary
-        now = time.time()
-        sleep_to_next = next_cycle_start - now
-        if sleep_to_next > 0:
-            time.sleep(sleep_to_next)
+        # Spawn three k6 processes
+        print(f"Spawning chunk {chunk_idx + 1}/{num_chunks} load generators...")
+        k6_a = subprocess.Popen(
+            ["./k6", "run", "skrip-percobaan/k6_replay_a.js"],
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+        )
+        k6_b = subprocess.Popen(
+            ["./k6", "run", "skrip-percobaan/k6_replay_b.js"],
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+        )
+        k6_c = subprocess.Popen(
+            ["./k6", "run", "skrip-percobaan/k6_replay_c.js"],
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+        )
+
+        next_cycle_start = float(sync_ts + chunk_offset)
+        for second in range(current_chunk_duration):
+            cycle_start = next_cycle_start
+            next_cycle_start = cycle_start + 1.0
+
+            # Load values
+            m_a = window_a_chunk[second]["Media_Service"]
+            c_a = window_a_chunk[second]["Content_Service"]
+            m_b = window_b_chunk[second]["Media_Service"]
+            c_b = window_b_chunk[second]["Content_Service"]
+            m_c = window_c_chunk[second]["Media_Service"]
+            c_c = window_c_chunk[second]["Content_Service"]
+
+            # Set Gauges
+            gauge_media_a.set(m_a)
+            gauge_content_a.set(c_a)
+            gauge_media_b.set(m_b)
+            gauge_content_b.set(c_b)
+            gauge_media_c.set(m_c)
+            gauge_content_c.set(c_c)
+
+            global_second = chunk_offset + second
+            if (global_second + 1) % 10 == 0 or global_second == 0:
+                print(f"Cycle {global_second+1}/{duration}:")
+                print(f"  - Bot A: Media={m_a}, Content={c_a}")
+                print(f"  - Bot B: Media={m_b}, Content={c_b}")
+                print(f"  - Bot C: Media={m_c}, Content={c_c}")
+
+            # Wait for next second boundary
+            now = time.time()
+            sleep_to_next = next_cycle_start - now
+            if sleep_to_next > 0:
+                time.sleep(sleep_to_next)
+
+        # Wait for k6 processes to shut down
+        k6_a.wait()
+        k6_b.wait()
+        k6_c.wait()
 
     # Reset Gauges
     gauge_media_a.set(0.0)
@@ -192,11 +216,6 @@ def main():
     gauge_content_b.set(0.0)
     gauge_media_c.set(0.0)
     gauge_content_c.set(0.0)
-
-    print("Waiting for k6 processes to shut down...")
-    k6_a.wait()
-    k6_b.wait()
-    k6_c.wait()
     print("Parallel Load Test Completed successfully.")
 
     # Automatically call metrics collector

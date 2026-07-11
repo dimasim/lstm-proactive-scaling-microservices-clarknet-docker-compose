@@ -1,0 +1,55 @@
+
+--- Collecting metrics for Set A into collected_metrics_a.csv ---
+Reading original datasets to compare...
+=== Set A Workload Comparison ===
+Media Service Total Requests:
+  - Sent (Dataset): 123
+  - Recorded (Prometheus): 123.00
+  - Match Accuracy: 100.00%
+Content Service Total Requests:
+  - Sent (Dataset): 15
+  - Recorded (Prometheus): 15.00
+  - Match Accuracy: 100.00%
+
+--- Collecting metrics for Set B into collected_metrics_b.csv ---
+Reading original datasets to compare...
+=== Set B Workload Comparison ===
+Media Service Total Requests:
+  - Sent (Dataset): 123
+  - Recorded (Prometheus): 123.00
+  - Match Accuracy: 100.00%
+Content Service Total Requests:
+  - Sent (Dataset): 15
+  - Recorded (Prometheus): 15.00
+  - Match Accuracy: 100.00%
+
+--- Collecting metrics for Set C into collected_metrics_c.csv ---
+Reading original datasets to compare...
+=== Set C Workload Comparison ===
+Media Service Total Requests:
+  - Sent (Dataset): 123
+  - Recorded (Prometheus): 123.00
+  - Match Accuracy: 100.00%
+Content Service Total Requests:
+  - Sent (Dataset): 15
+  - Recorded (Prometheus): 15.00
+  - Match Accuracy: 100.00%
+
+All parallel CSV extractions completed successfully!
+Started Prometheus exporter A on port 8011
+Started Prometheus exporter B on port 8012
+Started Prometheus exporter C on port 8013
+Loading workloads from dataset/aggregated_clarknet_rps_3x.csv and dataset/aggregated_clarknet_rps_week2_3x.csv...
+Generated skrip-percobaan/k6_replay_a.js successfully.
+Generated skrip-percobaan/k6_replay_b.js successfully.
+Generated skrip-percobaan/k6_replay_c.js successfully.
+Aligning clocks. Sleeping for 1.6459s to start at Unix Epoch 1783771239...
+Spawning parallel k6 load generators...
+Cycle 1/3:
+  - Bot A: Media=120, Content=12
+  - Bot B: Media=120, Content=12
+  - Bot C: Media=120, Content=12
+Waiting for k6 processes to shut down...
+Parallel Load Test Completed successfully.
+
+Triggering parallel metrics extraction...
