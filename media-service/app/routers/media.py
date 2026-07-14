@@ -29,9 +29,8 @@ def read_media():
     img_bytes = CACHED_IMAGES.get(selected_image)
 
     if img_bytes:
-        # Simulate mild dynamic memory overhead per request (e.g. image processing buffer)
-        # 900 KB per request creates a visible but safe RAM delta >100MB under concurrency
-        temp_buffer = bytearray(900 * 1024)
+        # 4 MB per request creates a visible but safe RAM delta >150MB under concurrency
+        temp_buffer = bytearray(4 * 1024 * 1024)
         temp_buffer[0] = 1
         temp_buffer[-1] = 1
 
