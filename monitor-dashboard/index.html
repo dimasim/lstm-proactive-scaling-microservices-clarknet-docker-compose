@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Parallel Load Test Monitor</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: rgba(30, 41, 59, 0.7);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent: #38bdf8;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --media-color: #8b5cf6;
+            --content-color: #ec4899;
+            --font-main: 'Inter', system-ui, -apple-system, sans-serif;
+        }
+
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: var(--font-main);
+            margin: 0;
+            padding: 20px;
+            background-image: radial-gradient(circle at top right, rgba(56, 189, 248, 0.1), transparent 400px),
+                              radial-gradient(circle at bottom left, rgba(139, 92, 246, 0.1), transparent 400px);
+            background-attachment: fixed;
+            min-height: 100vh;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(12px);
+            border-radius: 16px;
+            border: 1px solid rgba(255,255,255,0.05);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 700;
+            background: linear-gradient(to right, var(--accent), var(--media-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--success);
+            padding: 6px 12px;
+            border-radius: 9999px;
+            font-size: 14px;
+            font-weight: 600;
+            border: 1px solid rgba(16, 185, 129, 0.2);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--success);
+            box-shadow: 0 0 8px var(--success);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(0.95); opacity: 1; }
+            50% { transform: scale(1.5); opacity: 0.5; }
+            100% { transform: scale(0.95); opacity: 1; }
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 20px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            border-radius: 16px;
+            padding: 20px;
+            border: 1px solid rgba(255,255,255,0.05);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+            border-color: rgba(255,255,255,0.1);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .card-title {
+            margin: 0;
+            font-size: 20px;
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .service-section {
+            margin-bottom: 20px;
+        }
+
+        .service-title {
+            font-size: 14px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .title-media { color: var(--media-color); }
+        .title-content { color: var(--content-color); }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+
+        .metric-box {
+            background: rgba(15, 23, 42, 0.5);
+            padding: 12px;
+            border-radius: 10px;
+            border: 1px solid rgba(255,255,255,0.03);
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            transition: background 0.3s ease;
+        }
+
+        .metric-label {
+            font-size: 12px;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .metric-value {
+            font-size: 18px;
+            font-weight: 700;
+            color: #fff;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .value-change {
+            animation: highlight 1s ease;
+        }
+
+        @keyframes highlight {
+            0% { color: var(--accent); }
+            100% { color: #fff; }
+        }
+
+        /* Threshold colors */
+        .cpu-high { color: var(--danger) !important; }
+        .cpu-med { color: var(--warning) !important; }
+        .latency-high { color: var(--danger) !important; }
+        .latency-med { color: var(--warning) !important; }
+
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>Parallel Load Test Monitor</h1>
+        <div id="status" class="status-badge">
+            <div class="status-dot"></div>
+            <span id="status-text">Waiting for data...</span>
+        </div>
+    </div>
+
+    <div id="dashboard-grid" class="grid">
+        <!-- Cards injected via JS -->
+    </div>
+
+    <script>
+        // Injected by server.py
+        const SETS = __SETS__;
+
+        const grid = document.getElementById('dashboard-grid');
+        const statusText = document.getElementById('status-text');
+        
+        // Generate Cards
+        function generateCards() {
+            grid.innerHTML = '';
+            SETS.forEach(set => {
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.id = `card-${set}`;
+                card.innerHTML = `
+                    <div class="card-header">
+                        <h2 class="card-title">Set ${set.toUpperCase()}</h2>
+                    </div>
+                    
+                    <div class="service-section">
+                        <div class="service-title title-media">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect><line x1="7" y1="2" x2="7" y2="22"></line><line x1="17" y1="2" x2="17" y2="22"></line><line x1="2" y1="12" x2="22" y2="12"></line><line x1="2" y1="7" x2="7" y2="7"></line><line x1="2" y1="17" x2="7" y2="17"></line><line x1="17" y1="17" x2="22" y2="17"></line><line x1="17" y1="7" x2="22" y2="7"></line></svg>
+                            Media Service
+                        </div>
+                        <div class="metrics-grid">
+                            <div class="metric-box">
+                                <span class="metric-label">RPS</span>
+                                <span class="metric-value" id="rps_media_${set}">0</span>
+                            </div>
+                            <div class="metric-box">
+                                <span class="metric-label">CPU Usage</span>
+                                <span class="metric-value" id="cpu_media_${set}">0.0%</span>
+                            </div>
+                            <div class="metric-box">
+                                <span class="metric-label">Memory</span>
+                                <span class="metric-value" id="ram_media_${set}">0 MB</span>
+                            </div>
+                            <div class="metric-box">
+                                <span class="metric-label">P95 Latency</span>
+                                <span class="metric-value" id="latency_media_${set}">0 ms</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="service-section" style="margin-bottom: 0;">
+                        <div class="service-title title-content">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                            Content Service
+                        </div>
+                        <div class="metrics-grid">
+                            <div class="metric-box">
+                                <span class="metric-label">RPS</span>
+                                <span class="metric-value" id="rps_content_${set}">0</span>
+                            </div>
+                            <div class="metric-box">
+                                <span class="metric-label">CPU Usage</span>
+                                <span class="metric-value" id="cpu_content_${set}">0.0%</span>
+                            </div>
+                            <div class="metric-box">
+                                <span class="metric-label">Memory</span>
+                                <span class="metric-value" id="ram_content_${set}">0 MB</span>
+                            </div>
+                            <div class="metric-box">
+                                <span class="metric-label">P95 Latency</span>
+                                <span class="metric-value" id="latency_content_${set}">0 ms</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        function updateValue(id, value, suffix = '', isCpu = false, isLatency = false) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            
+            const currentVal = el.innerText;
+            const formatted = value.toFixed(isCpu ? 2 : 0) + suffix;
+            
+            if (currentVal !== formatted && currentVal !== '0' + suffix) {
+                el.classList.remove('value-change');
+                void el.offsetWidth; // trigger reflow
+                el.classList.add('value-change');
+            }
+            
+            el.innerText = formatted;
+
+            // Apply threshold classes
+            el.className = 'metric-value'; // reset
+            if (isCpu) {
+                if (value > 80) el.classList.add('cpu-high');
+                else if (value > 50) el.classList.add('cpu-med');
+            }
+            if (isLatency) {
+                if (value > 1000) el.classList.add('latency-high');
+                else if (value > 500) el.classList.add('latency-med');
+            }
+        }
+
+        generateCards();
+
+        // Connect SSE
+        const evtSource = new EventSource("/events");
+        
+        evtSource.onmessage = function(event) {
+            const data = JSON.parse(event.data);
+            statusText.innerText = "Live Connected";
+            
+            for (const [set, metrics] of Object.entries(data.sets)) {
+                updateValue(`rps_media_${set}`, metrics.rps_media || 0);
+                updateValue(`rps_content_${set}`, metrics.rps_content || 0);
+                
+                updateValue(`cpu_media_${set}`, metrics.cpu_media || 0, '%', true);
+                updateValue(`cpu_content_${set}`, metrics.cpu_content || 0, '%', true);
+                
+                updateValue(`ram_media_${set}`, metrics.ram_media || 0, ' MB');
+                updateValue(`ram_content_${set}`, metrics.ram_content || 0, ' MB');
+                
+                updateValue(`latency_media_${set}`, metrics.latency_media || 0, ' ms', false, true);
+                updateValue(`latency_content_${set}`, metrics.latency_content || 0, ' ms', false, true);
+            }
+        };
+
+        evtSource.onerror = function() {
+            statusText.innerText = "Disconnected - Reconnecting...";
+        };
+
+    </script>
+</body>
+</html>
