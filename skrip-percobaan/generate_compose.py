@@ -90,17 +90,20 @@ def generate_docker_compose(num_sets, server_id, port_start, suffix_offset=0):
     )
     infra += f"\n{haproxy_depends}"
     
+    
+    # Get the suffixes for this server's sets
+    set_suffixes = [get_suffix(suffix_offset + i) for i in range(num_sets)]
+    sets_arg = ",".join(set_suffixes)
+    
     infra += f"""
 
-  dashboard-service:
+  monitor-dashboard:
     build:
-      context: ./dashboard-service
-    container_name: dashboard-service
+      context: ./monitor-dashboard
+    container_name: monitor-dashboard
     ports:
       - "3002:3002"
-    environment:
-      - PROMETHEUS_URL=http://prometheus:9090
-      - PORT=3002
+    command: ["--sets", "{sets_arg}", "--prom-url", "http://prometheus:9090", "--port", "3002"]
     depends_on:
       - prometheus"""
     
