@@ -44,22 +44,29 @@ def collect_set_metrics(suffix, start_ts, end_ts, duration, dataset_start_idx):
 
     series_data = {}
     for key, q in queries.items():
-        results = query_prometheus_range(q, start_ts, end_ts, "1s")
+        print(f"  - Querying {key}...")
+        combined_values = []
+        chunk_size = 7200
+        curr_start = start_ts
+        while curr_start < end_ts:
+            curr_end = min(curr_start + chunk_size, end_ts)
+            results = query_prometheus_range(q, curr_start, curr_end, "1s")
+            if results and len(results) > 0:
+                combined_values.extend(results[0].get("values", []))
+            curr_start = curr_end
+            
         series_data[key] = [0.0] * duration
-        
-        if results and len(results) > 0:
-            values = results[0].get("values", [])
-            for val in values:
-                ts = int(val[0])
-                try:
-                    val_float = float(val[1])
-                except ValueError:
-                    val_float = 0.0
-                
-                # Compensate for the 1-second Prometheus scrape delay / phase shift
-                idx = ts - start_ts - 1
-                if 0 <= idx < duration:
-                    series_data[key][idx] = val_float
+        for val in combined_values:
+            ts = int(val[0])
+            try:
+                val_float = float(val[1])
+            except ValueError:
+                val_float = 0.0
+            
+            # Compensate for the 1-second Prometheus scrape delay / phase shift
+            idx = ts - start_ts - 1
+            if 0 <= idx < duration:
+                series_data[key][idx] = val_float
 
     with open(output_filename, mode='w', encoding='utf-8', newline='') as f:
         writer = csv.writer(f)
