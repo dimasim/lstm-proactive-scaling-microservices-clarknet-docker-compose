@@ -18,6 +18,9 @@ def generate_k6_script(window_df, suffix, port):
         media_stages.append(f"{{ target: {m_rps}, duration: '1s' }}")
         content_stages.append(f"{{ target: {c_rps}, duration: '1s' }}")
         
+    media_stages_str = ",\n        ".join(media_stages)
+    content_stages_str = ",\n        ".join(content_stages)
+    
     js_content = f"""
 import http from 'k6/http';
 
@@ -31,7 +34,7 @@ export const options = {{
       preAllocatedVUs: 10,
       maxVUs: 50,
       stages: [
-        {",\\n        ".join(media_stages)}
+        {media_stages_str}
       ],
       exec: 'media_request',
     }},
@@ -42,7 +45,7 @@ export const options = {{
       preAllocatedVUs: 5,
       maxVUs: 20,
       stages: [
-        {",\\n        ".join(content_stages)}
+        {content_stages_str}
       ],
       exec: 'content_request',
     }},
