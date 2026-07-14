@@ -49,14 +49,14 @@ def collect_set_metrics(suffix, start_ts, end_ts, duration, dataset_start_idx):
     queries = {
         "rps_media": f'sum(sent_rps_media{{job="load-generator-{suffix}"}})',
         "rps_content": f'sum(sent_rps_content{{job="load-generator-{suffix}"}})',
-        "cpu_media": f'sum(rate(container_cpu_usage_seconds_total{{container_label_com_docker_compose_service="media-service-{suffix}"}}[2s])) * 100',
-        "cpu_content": f'sum(rate(container_cpu_usage_seconds_total{{container_label_com_docker_compose_service="content-service-{suffix}"}}[2s])) * 100',
+        "cpu_media": f'sum(rate(container_cpu_usage_seconds_total{{container_label_com_docker_compose_service="media-service-{suffix}"}}[5s])) * 100',
+        "cpu_content": f'sum(rate(container_cpu_usage_seconds_total{{container_label_com_docker_compose_service="content-service-{suffix}"}}[5s])) * 100',
         "ram_media": f'sum(container_memory_working_set_bytes{{container_label_com_docker_compose_service="media-service-{suffix}"}}) / 1024 / 1024',
         "ram_content": f'sum(container_memory_working_set_bytes{{container_label_com_docker_compose_service="content-service-{suffix}"}}) / 1024 / 1024',
         "replicas_media": f'count(container_last_seen{{container_label_com_docker_compose_service="media-service-{suffix}"}} > time() - 15)',
         "replicas_content": f'count(container_last_seen{{container_label_com_docker_compose_service="content-service-{suffix}"}} > time() - 15)',
-        "latency_media": f'histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{{job="media-service-{suffix}"}}[2s])) by (le)) * 1000',
-        "latency_content": f'histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{{job="content-service-{suffix}"}}[2s])) by (le)) * 1000'
+        "latency_media": f'histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{{job="media-service-{suffix}"}}[5s])) by (le)) * 1000',
+        "latency_content": f'histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{{job="content-service-{suffix}"}}[5s])) by (le)) * 1000'
     }
 
     series_data = {}
