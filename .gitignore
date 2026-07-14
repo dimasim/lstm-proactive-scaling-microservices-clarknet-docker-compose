@@ -43,3 +43,4 @@ locust/*.csv
 # Experiment Outputs & Generated Scripts
 collected_metrics*.csv
 skrip-percobaan/k6_replay*.js
+*.log
