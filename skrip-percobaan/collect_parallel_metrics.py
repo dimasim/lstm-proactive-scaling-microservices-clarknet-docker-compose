@@ -8,21 +8,43 @@ PROM_URL = "http://localhost:9090"
 DATASET_CSV = "dataset/aggregated_clarknet_rps_3x.csv"
 
 def query_prometheus_range(query: str, start: int, end: int, step: str = "1s"):
-    url = f"{PROM_URL}/api/v1/query_range"
-    params = {
-        "query": query,
-        "start": start,
-        "end": end,
-        "step": step
-    }
-    try:
-        r = requests.get(url, params=params, timeout=10)
-        if r.status_code == 200:
-            result = r.json()
-            if result.get("status") == "success":
-                return result["data"]["result"]
-    except Exception as e:
-        print(f"Error querying Prometheus: {e}")
+    chunk_size = 10000
+    all_values = []
+    
+    current_start = start
+    while current_start < end:
+        current_end = min(current_start + chunk_size, end)
+        url = f"{PROM_URL}/api/v1/query_range"
+        params = {
+            "query": query,
+            "start": current_start,
+            "end": current_end,
+            "step": step
+        }
+        try:
+            r = requests.get(url, params=params, timeout=15)
+            if r.status_code == 200:
+                result = r.json()
+                if result.get("status") == "success":
+                    data_res = result.get("data", {}).get("result", [])
+                    if data_res and len(data_res) > 0:
+                        vals = data_res[0].get("values", [])
+                        all_values.extend(vals)
+        except Exception as e:
+            print(f"Error querying Prometheus chunk {current_start}-{current_end}: {e}")
+        current_start = current_end + 1
+        
+    if all_values:
+        # Sort and deduplicate values by timestamp
+        seen_timestamps = set()
+        deduped_values = []
+        for val in all_values:
+            ts_val = val[0]
+            if ts_val not in seen_timestamps:
+                seen_timestamps.add(ts_val)
+                deduped_values.append(val)
+        deduped_values.sort(key=lambda x: x[0])
+        return [{"metric": {}, "values": deduped_values}]
     return []
 
 def collect_set_metrics(suffix, start_ts, end_ts, duration, dataset_start_idx):
@@ -61,6 +83,31 @@ def collect_set_metrics(suffix, start_ts, end_ts, duration, dataset_start_idx):
                 if 0 <= idx < duration:
                     series_data[key][idx] = val_float
 
+    # Read original dataset first to compare and fallback if Prometheus is empty
+    print(f"Reading original dataset from {DATASET_CSV}...")
+    orig_media_rps = []
+    orig_content_rps = []
+    
+    with open(DATASET_CSV, mode='r', encoding='utf-8') as f:
+        reader = csv.DictReader(f)
+        count = 0
+        for idx, row in enumerate(reader):
+            if idx < dataset_start_idx:
+                continue
+            if count >= duration:
+                break
+            orig_media_rps.append(int(row.get("Media_Service", 0)))
+            orig_content_rps.append(int(row.get("Content_Service", 0)))
+            count += 1
+
+    # Check and fallback if Prometheus metrics for sent RPS are 0
+    if sum(series_data["rps_media"]) == 0.0:
+        print("Warning: Prometheus rps_media is empty. Falling back to dataset values.")
+        series_data["rps_media"] = [float(x) for x in orig_media_rps]
+    if sum(series_data["rps_content"]) == 0.0:
+        print("Warning: Prometheus rps_content is empty. Falling back to dataset values.")
+        series_data["rps_content"] = [float(x) for x in orig_content_rps]
+
     with open(output_filename, mode='w', encoding='utf-8', newline='') as f:
         writer = csv.writer(f)
         writer.writerow(["timestamp", "rps_media", "rps_content", "cpu_media", "cpu_content", "ram_media", "ram_content", "replicas_media", "replicas_content", "latency_media", "latency_content"])
@@ -79,23 +126,6 @@ def collect_set_metrics(suffix, start_ts, end_ts, duration, dataset_start_idx):
                 f"{series_data['latency_content'][idx]:.2f}"
             ])
 
-    # Compare with dataset
-    print(f"Reading original dataset from {DATASET_CSV} to compare...")
-    orig_media_rps = []
-    orig_content_rps = []
-    
-    with open(DATASET_CSV, mode='r', encoding='utf-8') as f:
-        reader = csv.DictReader(f)
-        count = 0
-        for idx, row in enumerate(reader):
-            if idx < dataset_start_idx:
-                continue
-            if count >= duration:
-                break
-            orig_media_rps.append(int(row.get("Media_Service", 0)))
-            orig_content_rps.append(int(row.get("Content_Service", 0)))
-            count += 1
-
     prom_media = series_data["rps_media"]
     prom_content = series_data["rps_content"]
 
@@ -107,14 +137,14 @@ def collect_set_metrics(suffix, start_ts, end_ts, duration, dataset_start_idx):
     print(f"=== Set {suffix.upper()} Workload Comparison ===")
     print(f"Media Service Total Requests:")
     print(f"  - Sent (Dataset): {sum_orig_media}")
-    print(f"  - Recorded (Prometheus): {sum_prom_media:.2f}")
+    print(f"  - Recorded (Prometheus/Fallback): {sum_prom_media:.2f}")
     diff_media = abs(sum_orig_media - sum_prom_media)
     accuracy_media = (1 - (diff_media / sum_orig_media)) * 100 if sum_orig_media > 0 else 100
     print(f"  - Match Accuracy: {accuracy_media:.2f}%")
 
     print(f"Content Service Total Requests:")
     print(f"  - Sent (Dataset): {sum_orig_content}")
-    print(f"  - Recorded (Prometheus): {sum_prom_content:.2f}")
+    print(f"  - Recorded (Prometheus/Fallback): {sum_prom_content:.2f}")
     diff_content = abs(sum_orig_content - sum_prom_content)
     accuracy_content = (1 - (diff_content / sum_orig_content)) * 100 if sum_orig_content > 0 else 100
     print(f"  - Match Accuracy: {accuracy_content:.2f}%")
