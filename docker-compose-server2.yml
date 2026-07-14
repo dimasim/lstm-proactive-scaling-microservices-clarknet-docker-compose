@@ -126,14 +126,12 @@ services:
       - haproxy-g
       - haproxy-h
 
-  dashboard-service:
+  monitor-dashboard:
     build:
-      context: ./dashboard-service
-    container_name: dashboard-service
+      context: ./monitor-dashboard
+    container_name: monitor-dashboard
     ports:
       - "3002:3002"
-    environment:
-      - PROMETHEUS_URL=http://prometheus:9090
-      - PORT=3002
+    command: ["--sets", "e,f,g,h", "--prom-url", "http://prometheus:9090", "--port", "3002"]
     depends_on:
       - prometheus
