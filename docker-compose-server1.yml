@@ -1,0 +1,139 @@
+version: '3.8'
+
+services:
+  haproxy-a:
+    image: haproxy:2.8-alpine
+    container_name: haproxy-a
+    ports:
+      - "8000:80"
+    volumes:
+      - ./haproxy/haproxy-a.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+    depends_on:
+      - media-service-a
+      - content-service-a
+
+  media-service-a:
+    build:
+      context: ./media-service
+    image: media-service:latest
+    container_name: media-service-a
+
+  content-service-a:
+    build:
+      context: ./content-service
+    image: content-service:latest
+    container_name: content-service-a
+  haproxy-b:
+    image: haproxy:2.8-alpine
+    container_name: haproxy-b
+    ports:
+      - "8001:80"
+    volumes:
+      - ./haproxy/haproxy-b.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+    depends_on:
+      - media-service-b
+      - content-service-b
+
+  media-service-b:
+    build:
+      context: ./media-service
+    image: media-service:latest
+    container_name: media-service-b
+
+  content-service-b:
+    build:
+      context: ./content-service
+    image: content-service:latest
+    container_name: content-service-b
+  haproxy-c:
+    image: haproxy:2.8-alpine
+    container_name: haproxy-c
+    ports:
+      - "8002:80"
+    volumes:
+      - ./haproxy/haproxy-c.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+    depends_on:
+      - media-service-c
+      - content-service-c
+
+  media-service-c:
+    build:
+      context: ./media-service
+    image: media-service:latest
+    container_name: media-service-c
+
+  content-service-c:
+    build:
+      context: ./content-service
+    image: content-service:latest
+    container_name: content-service-c
+  haproxy-d:
+    image: haproxy:2.8-alpine
+    container_name: haproxy-d
+    ports:
+      - "8003:80"
+    volumes:
+      - ./haproxy/haproxy-d.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+    depends_on:
+      - media-service-d
+      - content-service-d
+
+  media-service-d:
+    build:
+      context: ./media-service
+    image: media-service:latest
+    container_name: media-service-d
+
+  content-service-d:
+    build:
+      context: ./content-service
+    image: content-service:latest
+    container_name: content-service-d
+
+  cadvisor:
+    image: ghcr.io/google/cadvisor:latest
+    container_name: cadvisor
+    privileged: true
+    devices:
+      - "/dev/kmsg:/dev/kmsg"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /sys/fs/cgroup:/sys/fs/cgroup:ro
+      - /var/lib/docker/:/rootfs/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    command:
+      - '--housekeeping_interval=1s'
+      - '--max_housekeeping_interval=1s'
+      - '--docker_only=true'
+
+  prometheus:
+    image: prom/prometheus:v2.45.0
+    container_name: prometheus
+    volumes:
+      - ./prometheus/prometheus-server1.yml:/etc/prometheus/prometheus.yml:ro
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=3d'
+    ports:
+      - "9090:9090"
+    depends_on:
+      - cadvisor
+      - haproxy-a
+      - haproxy-b
+      - haproxy-c
+      - haproxy-d
+
+  dashboard-service:
+    build:
+      context: ./dashboard-service
+    container_name: dashboard-service
+    ports:
+      - "3002:3002"
+    environment:
+      - PROMETHEUS_URL=http://prometheus:9090
+      - PORT=3002
+    depends_on:
+      - prometheus

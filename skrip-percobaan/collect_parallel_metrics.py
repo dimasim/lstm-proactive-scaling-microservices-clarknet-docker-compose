@@ -3,11 +3,14 @@ import requests
 import csv
 import sys
 import os
+import argparse
+import string
 
 PROM_URL = "http://localhost:9090"
 DATASET_CSV = "dataset/aggregated_clarknet_rps_3x.csv"
 
-def query_prometheus_range(query: str, start: int, end: int, step: str = "1s"):
+def query_prometheus_range(query: str, start: int, end: int, step: str = "1s", retries: int = 3, timeout: int = 30):
+    """Query Prometheus range API with retry logic and exponential backoff."""
     url = f"{PROM_URL}/api/v1/query_range"
     params = {
         "query": query,
@@ -15,14 +18,28 @@ def query_prometheus_range(query: str, start: int, end: int, step: str = "1s"):
         "end": end,
         "step": step
     }
-    try:
-        r = requests.get(url, params=params, timeout=10)
-        if r.status_code == 200:
-            result = r.json()
-            if result.get("status") == "success":
-                return result["data"]["result"]
-    except Exception as e:
-        print(f"Error querying Prometheus: {e}")
+    for attempt in range(retries):
+        try:
+            r = requests.get(url, params=params, timeout=timeout)
+            if r.status_code == 200:
+                result = r.json()
+                if result.get("status") == "success":
+                    return result["data"]["result"]
+                else:
+                    print(f"    ⚠️  Prometheus returned status={result.get('status')}: {result.get('error', 'unknown')}")
+            else:
+                print(f"    ⚠️  HTTP {r.status_code} from Prometheus")
+        except requests.exceptions.Timeout:
+            print(f"    ⚠️  Timeout (attempt {attempt+1}/{retries}) for query chunk {start}-{end}")
+        except Exception as e:
+            print(f"    ⚠️  Error (attempt {attempt+1}/{retries}): {e}")
+        
+        if attempt < retries - 1:
+            wait = 2 ** attempt  # exponential backoff: 1s, 2s, 4s
+            print(f"    ⏳ Retrying in {wait}s...")
+            time.sleep(wait)
+    
+    print(f"    ❌ All {retries} attempts failed for chunk {start}-{end}")
     return []
 
 def collect_set_metrics(suffix, start_ts, end_ts, duration, dataset_start_idx):
@@ -43,18 +60,52 @@ def collect_set_metrics(suffix, start_ts, end_ts, duration, dataset_start_idx):
     }
 
     series_data = {}
+    query_stats = {}  # Track query success/failure per metric
+
     for key, q in queries.items():
         print(f"  - Querying {key}...")
         combined_values = []
+        seen_timestamps = set()  # Fix Bug #4: Deduplication
         chunk_size = 7200
         curr_start = start_ts
+        total_chunks = (end_ts - start_ts + chunk_size - 1) // chunk_size
+        chunk_num = 0
+        chunks_failed = 0
+        chunks_succeeded = 0
+
         while curr_start < end_ts:
-            curr_end = min(curr_start + chunk_size, end_ts)
+            # Fix Bug #3: Use exclusive end to avoid boundary overlap
+            curr_end = min(curr_start + chunk_size - 1, end_ts)
+            chunk_num += 1
+
+            # Progress logging
+            if chunk_num % 10 == 0 or chunk_num == 1 or chunk_num == total_chunks:
+                print(f"    📊 Chunk {chunk_num}/{total_chunks} ({chunk_num/total_chunks*100:.0f}%)")
+
             results = query_prometheus_range(q, curr_start, curr_end, "1s")
             if results and len(results) > 0:
-                combined_values.extend(results[0].get("values", []))
-            curr_start = curr_end
+                for val in results[0].get("values", []):
+                    ts = int(val[0])
+                    # Fix Bug #4: Deduplicate timestamps
+                    if ts not in seen_timestamps:
+                        seen_timestamps.add(ts)
+                        combined_values.append(val)
+                chunks_succeeded += 1
+            else:
+                chunks_failed += 1
+
+            # Fix Bug #3: Move to next non-overlapping chunk
+            curr_start = curr_end + 1
             
+        # Track stats
+        query_stats[key] = {
+            "total_chunks": chunk_num,
+            "succeeded": chunks_succeeded,
+            "failed": chunks_failed,
+            "data_points": len(combined_values),
+            "expected_points": duration,
+        }
+
         series_data[key] = [0.0] * duration
         for val in combined_values:
             ts = int(val[0])
@@ -68,6 +119,58 @@ def collect_set_metrics(suffix, start_ts, end_ts, duration, dataset_start_idx):
             if 0 <= idx < duration:
                 series_data[key][idx] = val_float
 
+    # Fix Bug #5: Freeze detection BEFORE writing CSV
+    print(f"\n  🔍 Freeze Detection for Set {suffix.upper()}:")
+    freeze_found = False
+    for key in series_data:
+        values = series_data[key]
+        streak = 0
+        freeze_periods = []
+        for i in range(1, len(values)):
+            if values[i] == values[i-1]:
+                streak += 1
+            else:
+                if streak >= 30:
+                    freeze_periods.append({
+                        "start_idx": i - streak,
+                        "end_idx": i - 1,
+                        "duration": streak,
+                        "value": values[i-1]
+                    })
+                streak = 0
+        # Check last streak
+        if streak >= 30:
+            freeze_periods.append({
+                "start_idx": len(values) - streak,
+                "end_idx": len(values) - 1,
+                "duration": streak,
+                "value": values[-1]
+            })
+        
+        if freeze_periods:
+            freeze_found = True
+            total_frozen = sum(f["duration"] for f in freeze_periods)
+            pct = total_frozen / len(values) * 100
+            print(f"    ⚠️  FREEZE in {key}: {len(freeze_periods)} periods, "
+                  f"{total_frozen}s total ({pct:.2f}%)")
+            for fp in freeze_periods[:3]:  # show first 3
+                print(f"        Row {fp['start_idx']}-{fp['end_idx']} ({fp['duration']}s) "
+                      f"stuck at {fp['value']}")
+            if len(freeze_periods) > 3:
+                print(f"        ... and {len(freeze_periods) - 3} more")
+    
+    if not freeze_found:
+        print(f"    ✅ No freeze patterns detected!")
+
+    # Fix Bug #5: Query success validation
+    print(f"\n  📊 Query Stats for Set {suffix.upper()}:")
+    for key, stats in query_stats.items():
+        coverage = stats["data_points"] / stats["expected_points"] * 100 if stats["expected_points"] > 0 else 0
+        status = "✅" if coverage > 95 else ("⚠️" if coverage > 50 else "❌")
+        print(f"    {status} {key}: {stats['data_points']}/{stats['expected_points']} points "
+              f"({coverage:.1f}%), {stats['failed']} chunks failed")
+
+    # Write CSV
     with open(output_filename, mode='w', encoding='utf-8', newline='') as f:
         writer = csv.writer(f)
         writer.writerow(["timestamp", "rps_media", "rps_content", "cpu_media", "cpu_content", "ram_media", "ram_content", "replicas_media", "replicas_content", "latency_media", "latency_content"])
@@ -86,8 +189,10 @@ def collect_set_metrics(suffix, start_ts, end_ts, duration, dataset_start_idx):
                 series_data["latency_content"][idx]
             ])
 
+    print(f"\n  ✅ Wrote {duration} rows to {output_filename}")
+
     # Compare with dataset
-    print(f"Reading original datasets to compare...")
+    print(f"  Reading original datasets to compare...")
     orig_media_rps = []
     orig_content_rps = []
     
@@ -135,21 +240,52 @@ def collect_set_metrics(suffix, start_ts, end_ts, duration, dataset_start_idx):
     print(f"  - Match Accuracy: {accuracy_content:.2f}%")
 
 def main():
-    if len(sys.argv) < 6:
-        print("Usage: python3 collect_parallel_metrics.py <start_unix_timestamp> <end_unix_timestamp> <dataset_start_idx_a> <dataset_start_idx_b> <dataset_start_idx_c>")
-        return
-
-    start_ts = int(sys.argv[1])
-    end_ts = int(sys.argv[2])
+    parser = argparse.ArgumentParser(
+        description="Collect metrics from Prometheus for parallel load test sets",
+        usage="python3 collect_parallel_metrics.py <start_ts> <end_ts> [options]"
+    )
+    parser.add_argument("start_ts", type=int, help="Start Unix timestamp")
+    parser.add_argument("end_ts", type=int, help="End Unix timestamp")
+    parser.add_argument("--sets", type=str, default="a,b,c",
+                        help="Comma-separated set suffixes (default: a,b,c)")
+    parser.add_argument("--start-indices", type=str, default=None,
+                        help="Comma-separated dataset start indices for each set")
+    
+    # Legacy positional args support (backward compatible)
+    parser.add_argument("legacy_indices", nargs="*", type=int,
+                        help=argparse.SUPPRESS)
+    
+    args = parser.parse_args()
+    
+    start_ts = args.start_ts
+    end_ts = args.end_ts
     duration = end_ts - start_ts
-    dataset_start_idx_a = int(sys.argv[3])
-    dataset_start_idx_b = int(sys.argv[4])
-    dataset_start_idx_c = int(sys.argv[5])
-
-    collect_set_metrics("a", start_ts, end_ts, duration, dataset_start_idx_a)
-    collect_set_metrics("b", start_ts, end_ts, duration, dataset_start_idx_b)
-    collect_set_metrics("c", start_ts, end_ts, duration, dataset_start_idx_c)
-    print("\nAll parallel CSV extractions completed successfully!")
+    
+    suffixes = args.sets.split(",")
+    
+    # Handle start indices - either from --start-indices or legacy positional args
+    if args.start_indices:
+        start_indices = [int(x) for x in args.start_indices.split(",")]
+    elif args.legacy_indices:
+        start_indices = args.legacy_indices
+    else:
+        # Default: evenly spaced
+        total_rows = 1209425  # default total
+        chunk = total_rows // len(suffixes)
+        start_indices = [i * chunk for i in range(len(suffixes))]
+    
+    if len(suffixes) != len(start_indices):
+        print(f"❌ Error: {len(suffixes)} sets but {len(start_indices)} start indices")
+        return
+    
+    print(f"📊 Collecting metrics for {len(suffixes)} sets: {', '.join(s.upper() for s in suffixes)}")
+    print(f"⏱️  Duration: {duration}s ({duration/3600:.1f}h)")
+    print(f"📅 Timestamp range: {start_ts} - {end_ts}")
+    
+    for suffix, dataset_start_idx in zip(suffixes, start_indices):
+        collect_set_metrics(suffix, start_ts, end_ts, duration, dataset_start_idx)
+    
+    print("\n✅ All parallel CSV extractions completed successfully!")
 
 if __name__ == "__main__":
     main()

@@ -1,0 +1,76 @@
+global:
+  scrape_interval: 1s
+  evaluation_interval: 1s
+
+scrape_configs:
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']
+
+  - job_name: 'haproxy-i'
+    static_configs:
+      - targets: ['haproxy-i:8404']
+
+  - job_name: 'media-service-i'
+    static_configs:
+      - targets: ['media-service-i:8000']
+
+  - job_name: 'content-service-i'
+    static_configs:
+      - targets: ['content-service-i:8000']
+
+  - job_name: 'load-generator-i'
+    static_configs:
+      - targets: ['172.17.0.1:8011']
+
+  - job_name: 'haproxy-j'
+    static_configs:
+      - targets: ['haproxy-j:8404']
+
+  - job_name: 'media-service-j'
+    static_configs:
+      - targets: ['media-service-j:8000']
+
+  - job_name: 'content-service-j'
+    static_configs:
+      - targets: ['content-service-j:8000']
+
+  - job_name: 'load-generator-j'
+    static_configs:
+      - targets: ['172.17.0.1:8012']
+
+  - job_name: 'haproxy-k'
+    static_configs:
+      - targets: ['haproxy-k:8404']
+
+  - job_name: 'media-service-k'
+    static_configs:
+      - targets: ['media-service-k:8000']
+
+  - job_name: 'content-service-k'
+    static_configs:
+      - targets: ['content-service-k:8000']
+
+  - job_name: 'load-generator-k'
+    static_configs:
+      - targets: ['172.17.0.1:8013']
+
+  - job_name: 'haproxy-l'
+    static_configs:
+      - targets: ['haproxy-l:8404']
+
+  - job_name: 'media-service-l'
+    static_configs:
+      - targets: ['media-service-l:8000']
+
+  - job_name: 'content-service-l'
+    static_configs:
+      - targets: ['content-service-l:8000']
+
+  - job_name: 'load-generator-l'
+    static_configs:
+      - targets: ['172.17.0.1:8014']
