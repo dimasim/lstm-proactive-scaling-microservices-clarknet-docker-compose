@@ -31,8 +31,8 @@ export const options = {{
       executor: 'ramping-arrival-rate',
       startRate: 0,
       timeUnit: '1s',
-      preAllocatedVUs: 10,
-      maxVUs: 50,
+      preAllocatedVUs: 75,
+      maxVUs: 200,
       stages: [
         {media_stages_str}
       ],
@@ -42,8 +42,8 @@ export const options = {{
       executor: 'ramping-arrival-rate',
       startRate: 0,
       timeUnit: '1s',
-      preAllocatedVUs: 5,
-      maxVUs: 20,
+      preAllocatedVUs: 25,
+      maxVUs: 75,
       stages: [
         {content_stages_str}
       ],
