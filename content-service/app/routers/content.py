@@ -36,9 +36,8 @@ def read_content(request: Request):
     # Simulate a lightweight billing check
     hash_val = hashlib.md5(b"billing_check").hexdigest()
 
-    # Simulate mild dynamic memory overhead per request (e.g. session/parsing buffer)
-    # 600 KB per request creates a visible but safe RAM delta >100MB under concurrency
-    temp_buffer = bytearray(600 * 1024)
+    # 3 MB per request creates a visible but safe RAM delta >100MB under concurrency
+    temp_buffer = bytearray(3 * 1024 * 1024)
     temp_buffer[0] = 1
     temp_buffer[-1] = 1
 
