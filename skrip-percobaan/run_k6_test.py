@@ -25,7 +25,9 @@ def generate_k6_script(window_df):
         # In ramping-arrival-rate, we define target rates second-by-second
         media_stages.append(f"{{ target: {m_rps}, duration: '1s' }}")
         content_stages.append(f"{{ target: {c_rps}, duration: '1s' }}")
-        
+    media_stages_str = ",\n        ".join(media_stages)
+    content_stages_str = ",\n        ".join(content_stages)
+    
     js_content = f"""
 import http from 'k6/http';
 
@@ -38,7 +40,7 @@ export const options = {{
       preAllocatedVUs: 150,
       maxVUs: 400,
       stages: [
-        {",\n        ".join(media_stages)}
+        {media_stages_str}
       ],
       exec: 'media_request',
     }},
@@ -49,7 +51,7 @@ export const options = {{
       preAllocatedVUs: 50,
       maxVUs: 150,
       stages: [
-        {",\n        ".join(content_stages)}
+        {content_stages_str}
       ],
       exec: 'content_request',
     }},
@@ -96,11 +98,12 @@ def main():
     
     # 4. Spawn k6 background process
     print("Spawning k6 load generator...")
-    k6_process = subprocess.Popen(
-        ["./k6", "run", "skrip-percobaan/k6_replay.js"],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL
-    )
+    with open("k6_summary.txt", "w") as k6_out:
+        k6_process = subprocess.Popen(
+            ["./k6", "run", "skrip-percobaan/k6_replay.js"],
+            stdout=k6_out,
+            stderr=subprocess.STDOUT
+        )
     
     # 5. Run local gauge updater in sync with k6 stages
     next_cycle_start = float(sync_ts)

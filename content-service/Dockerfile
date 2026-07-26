@@ -1,12 +1,24 @@
-FROM python:3.10-slim
+FROM golang:1.21-alpine AS builder
 
 WORKDIR /app
 
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Initialize a dummy module
+RUN go mod init content-service
 
-COPY . .
+COPY main.go .
 
+# Build the binary
+RUN CGO_ENABLED=0 GOOS=linux go build -o server main.go
+
+FROM alpine:latest
+WORKDIR /app
+
+# Copy the binary and templates
+COPY --from=builder /app/server .
+COPY templates/ ./templates/
+
+# Expose port
 EXPOSE 8000
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]
+# Run the binary
+CMD ["./server"]

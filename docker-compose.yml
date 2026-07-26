@@ -16,11 +16,27 @@ services:
     build:
       context: ./media-service
     image: media-service:latest
+    deploy:
+      replicas: 13
+      resources:
+        limits:
+          cpus: '0.1'
+          memory: '64M'
+    environment:
+      - CPU_LOAD_ITERATIONS=51000
 
   content-service:
     build:
       context: ./content-service
     image: content-service:latest
+    deploy:
+      replicas: 5
+      resources:
+        limits:
+          cpus: '0.1'
+          memory: '64M'
+    environment:
+      - CPU_LOAD_ITERATIONS=17000
 
 
   cadvisor:
@@ -79,4 +95,23 @@ services:
     depends_on:
       - prometheus
 
-
+  brain-orchestrator:
+    build:
+      context: ./brain-orchestrator
+    container_name: brain-orchestrator
+    volumes:
+      - /home/dimas/kkk/data:/app/data:ro
+      - /home/dimas/kkk/models:/app/models:ro
+      - ./:/app/compose
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - PROMETHEUS_URL=http://prometheus:9090
+      - DASHBOARD_PREDICT_URL=http://dashboard-service:3002/api/predict
+      - PRELOAD_CSV=${PRELOAD_CSV:-/app/data/combined_clarknet_rps_3x.csv}
+      - COMPOSE_PROJECT_NAME=lstm-proactive-scaling-microservices-clarknet-docker-compose
+      - COMPOSE_DIR=/app/compose
+      - MODEL_PATH=/app/models/LSTM_1min_1step.h5
+      - SCALER_PATH=/app/models/rps_scaler_1min_1step.pkl
+    depends_on:
+      - prometheus
+      - dashboard-service

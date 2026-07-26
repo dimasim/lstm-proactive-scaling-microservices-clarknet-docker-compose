@@ -52,7 +52,7 @@
 
             <!-- AI Predicted RPS Card -->
             <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 glow transition hover:border-purple-500/50">
-                <div class="text-xs font-bold text-slate-300 uppercase tracking-wider">AI Predicted RPS (+1m)</div>
+                <div class="text-xs font-bold text-slate-300 uppercase tracking-wider">AI Predicted RPS (+1s)</div>
                 <div class="mt-3 flex items-baseline justify-between">
                     <div>
                         <span class="text-3xl font-extrabold text-white" id="stat-pred-content">0.00</span>
@@ -244,7 +244,7 @@
                         borderWidth: 3
                     },
                     {
-                        label: 'AI Predicted RPS +1m (Content)',
+                        label: 'AI Predicted RPS +1s (Content)',
                         data: dataPredContent,
                         borderColor: '#a855f7',
                         borderDash: [5, 5],
@@ -253,7 +253,7 @@
                         borderWidth: 2
                     },
                     {
-                        label: 'AI Predicted RPS +1m (Media)',
+                        label: 'AI Predicted RPS +1s (Media)',
                         data: dataPredMedia,
                         borderColor: '#ec4899',
                         borderDash: [5, 5],
@@ -398,22 +398,15 @@
             // Formatted Time Label (HH:MM:SS)
             const timeLabel = new Date(payload.timestamp * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
-            // For AI Predictions, we mock/set vectors to 0.0 or 1.0 (matching your Grafana configuration)
-            // until the LSTM forecast model is integrated in Fase 2.
-            const predContent = 0.0;
-            const predMedia = 0.0;
-            const targetContent = 1.0;
-            const targetMedia = 1.0;
-
             // Update stats cards text
             document.getElementById('stat-rps-content').innerText = Math.round(payload.rps_content).toFixed(2);
             document.getElementById('stat-rps-media').innerText = Math.round(payload.rps_media).toFixed(2);
             
-            document.getElementById('stat-pred-content').innerText = predContent.toFixed(2);
-            document.getElementById('stat-pred-media').innerText = predMedia.toFixed(2);
+            document.getElementById('stat-pred-content').innerText = (payload.predicted_rps_content || 0.0).toFixed(2);
+            document.getElementById('stat-pred-media').innerText = (payload.predicted_rps_media || 0.0).toFixed(2);
             
-            document.getElementById('stat-repl-content').innerText = `${payload.replicas_content} / ${targetContent}`;
-            document.getElementById('stat-repl-media').innerText = `${payload.replicas_media} / ${targetMedia}`;
+            document.getElementById('stat-repl-content').innerText = `${payload.replicas_content} / ${payload.predicted_replicas_content || 1.0}`;
+            document.getElementById('stat-repl-media').innerText = `${payload.replicas_media} / ${payload.predicted_replicas_media || 1.0}`;
 
             document.getElementById('stat-cpu-ram-content').innerText = `${payload.cpu_content.toFixed(0)}% / ${payload.ram_content.toFixed(0)}M`;
             document.getElementById('stat-cpu-ram-media').innerText = `${payload.cpu_media.toFixed(0)}% / ${payload.ram_media.toFixed(0)}M`;
@@ -446,13 +439,14 @@
             timestamps.push(timeLabel);
             dataRpsContent.push(payload.rps_content);
             dataRpsMedia.push(payload.rps_media);
-            dataPredContent.push(predContent);
-            dataPredMedia.push(predMedia);
+            // Plot nilai yang dikirim dari backend (sudah disinkronkan tepat di T)
+            dataPredContent.push(payload.predicted_rps_content || 0.0);
+            dataPredMedia.push(payload.predicted_rps_media || 0.0);
             
             dataReplContent.push(payload.replicas_content);
             dataReplMedia.push(payload.replicas_media);
-            dataTargetContent.push(targetContent);
-            dataTargetMedia.push(targetMedia);
+            dataTargetContent.push(payload.predicted_replicas_content || 1.0);
+            dataTargetMedia.push(payload.predicted_replicas_media || 1.0);
 
             dataCpuContent.push(payload.cpu_content);
             dataCpuMedia.push(payload.cpu_media);

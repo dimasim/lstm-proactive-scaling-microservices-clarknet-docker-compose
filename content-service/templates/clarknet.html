@@ -219,16 +219,16 @@
                         </tr>
                     </thead>
                     <tbody>
-                        {% for user in users %}
+                        {{ range .users }}
                         <tr>
-                            <td><strong>{{ user.username }}</strong></td>
-                            <td>{{ user.node }}</td>
-                            <td>{{ user.ip }}</td>
-                            <td>{{ user.baud }}</td>
-                            <td>{{ user.duration }}</td>
+                            <td><strong>{{ .Username }}</strong></td>
+                            <td>{{ .Node }}</td>
+                            <td>{{ .IP }}</td>
+                            <td>{{ .Baud }}</td>
+                            <td>{{ .Duration }}</td>
                             <td><span class="status-badge status-active">ACTIVE</span></td>
                         </tr>
-                        {% endfor %}
+                        {{ end }}
                     </tbody>
                 </table>
             </div>

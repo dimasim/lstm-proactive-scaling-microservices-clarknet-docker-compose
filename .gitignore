@@ -39,3 +39,7 @@ locust/*.csv
 *.njsproj
 *.sln
 *.swp
+*.log
+*.csv
+*.txt
+*.json

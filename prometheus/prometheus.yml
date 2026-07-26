@@ -24,6 +24,10 @@ scrape_configs:
     static_configs:
       - targets: ['content-service:8000']
 
+  - job_name: 'brain-orchestrator'
+    static_configs:
+      - targets: ['brain-orchestrator:8000']
+
   - job_name: 'load-generator'
     static_configs:
       - targets: ['172.17.0.1:8001']

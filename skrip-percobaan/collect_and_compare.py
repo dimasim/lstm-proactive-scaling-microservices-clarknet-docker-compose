@@ -65,7 +65,11 @@ def main():
         "replicas_media": 'count(container_last_seen{container_label_com_docker_compose_service="media-service"} > time() - 15)',
         "replicas_content": 'count(container_last_seen{container_label_com_docker_compose_service="content-service"} > time() - 15)',
         "latency_media": 'histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{job="media-service"}[2s])) by (le)) * 1000',
-        "latency_content": 'histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{job="content-service"}[2s])) by (le)) * 1000'
+        "latency_content": 'histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{job="content-service"}[2s])) by (le)) * 1000',
+        "predicted_rps_media": 'predicted_rps_media',
+        "predicted_rps_content": 'predicted_rps_content',
+        "target_replicas_media": 'target_replicas_media',
+        "target_replicas_content": 'target_replicas_content'
     }
 
     # Gather data points
@@ -94,7 +98,7 @@ def main():
     print(f"Writing metrics to {OUTPUT_CSV}...")
     with open(OUTPUT_CSV, mode='w', encoding='utf-8', newline='') as f:
         writer = csv.writer(f)
-        writer.writerow(["timestamp", "rps_media", "rps_content", "cpu_media", "cpu_content", "ram_media", "ram_content", "replicas_media", "replicas_content", "latency_media", "latency_content"])
+        writer.writerow(["timestamp", "rps_media", "rps_content", "cpu_media", "cpu_content", "ram_media", "ram_content", "replicas_media", "replicas_content", "latency_media", "latency_content", "predicted_rps_media", "predicted_rps_content", "target_replicas_media", "target_replicas_content"])
         for idx in range(duration):
             writer.writerow([
                 start_ts + idx,
@@ -107,7 +111,11 @@ def main():
                 series_data["replicas_media"][idx],
                 series_data["replicas_content"][idx],
                 series_data["latency_media"][idx],
-                series_data["latency_content"][idx]
+                series_data["latency_content"][idx],
+                series_data["predicted_rps_media"][idx],
+                series_data["predicted_rps_content"][idx],
+                series_data["target_replicas_media"][idx],
+                series_data["target_replicas_content"][idx]
             ])
 
     # Compare with dataset

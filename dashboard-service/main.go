@@ -30,7 +30,23 @@ type MetricsPayload struct {
 	ReplicasContent float64 `json:"replicas_content"`
 	LatencyMedia    float64 `json:"latency_media"`
 	LatencyContent  float64 `json:"latency_content"`
+	PredictedRpsMedia        float64 `json:"predicted_rps_media"`
+	PredictedRpsContent      float64 `json:"predicted_rps_content"`
+	PredictedReplicasMedia   float64 `json:"predicted_replicas_media"`
+	PredictedReplicasContent float64 `json:"predicted_replicas_content"`
 }
+
+type PredictionData struct {
+	RpsMedia        float64 `json:"predicted_rps_media"`
+	RpsContent      float64 `json:"predicted_rps_content"`
+	ReplicasMedia   float64 `json:"predicted_replicas_media"`
+	ReplicasContent float64 `json:"predicted_replicas_content"`
+}
+
+var (
+	latestPrediction PredictionData
+	predMu           sync.RWMutex
+)
 
 // Client represents a connected SSE client
 type Client chan string
@@ -83,9 +99,9 @@ func (b *Broker) Start() {
 	}
 }
 
-func queryPrometheus(promURL, query string) (float64, error) {
-	apiURL := fmt.Sprintf("%s/api/v1/query?query=%s", promURL, url.QueryEscape(query))
-	ctx, cancel := context.WithTimeout(context.Background(), 800*time.Millisecond)
+func queryPrometheus(promURL, query string, timestamp int64) (float64, error) {
+	apiURL := fmt.Sprintf("%s/api/v1/query?query=%s&time=%d", promURL, url.QueryEscape(query), timestamp)
+	ctx, cancel := context.WithTimeout(context.Background(), 2000*time.Millisecond)
 	defer cancel()
 
 	req, err := http.NewRequestWithContext(ctx, "GET", apiURL, nil)
@@ -142,7 +158,8 @@ func queryPrometheus(promURL, query string) (float64, error) {
 
 func collectMetrics(promURL string) MetricsPayload {
 	var payload MetricsPayload
-	payload.Timestamp = time.Now().Unix()
+	vizTime := time.Now().Unix() - 5 // Delay 5s to wait for p99 and prometheus scrapes to settle
+	payload.Timestamp = vizTime
 
 	queries := map[string]string{
 		"rps_media":        `sum(sent_rps_media)`,
@@ -153,8 +170,12 @@ func collectMetrics(promURL string) MetricsPayload {
 		"ram_content":      `sum(container_memory_working_set_bytes{container_label_com_docker_compose_service="content-service"}) / 1024 / 1024`,
 		"replicas_media":   `count(container_last_seen{container_label_com_docker_compose_service="media-service"} > time() - 15)`,
 		"replicas_content": `count(container_last_seen{container_label_com_docker_compose_service="content-service"} > time() - 15)`,
-		"latency_media":    `histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{job="media-service"}[2s])) by (le)) * 1000`,
-		"latency_content":  `histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{job="content-service"}[2s])) by (le)) * 1000`,
+		"latency_media":    `haproxy_backend_response_time_average_seconds{proxy="media_back"} * 1000`,
+		"latency_content":  `haproxy_backend_response_time_average_seconds{proxy="content_back"} * 1000`,
+		"predicted_rps_media":        `sum(predicted_rps_media)`,
+		"predicted_rps_content":      `sum(predicted_rps_content)`,
+		"predicted_replicas_media":   `sum(target_replicas_media)`,
+		"predicted_replicas_content": `sum(target_replicas_content)`,
 	}
 
 	var wg sync.WaitGroup
@@ -164,7 +185,14 @@ func collectMetrics(promURL string) MetricsPayload {
 		wg.Add(1)
 		go func(k, q string) {
 			defer wg.Done()
-			val, err := queryPrometheus(promURL, q)
+			
+			// Predictions were generated at T-1 for time T
+			queryTime := vizTime
+			if k == "predicted_rps_media" || k == "predicted_rps_content" || k == "predicted_replicas_media" || k == "predicted_replicas_content" {
+				queryTime = vizTime - 1
+			}
+
+			val, err := queryPrometheus(promURL, q, queryTime)
 			if err != nil {
 				log.Printf("Error querying Prometheus for key %s: %v", k, err)
 				return
@@ -191,12 +219,23 @@ func collectMetrics(promURL string) MetricsPayload {
 				payload.LatencyMedia = val
 			case "latency_content":
 				payload.LatencyContent = val
+			case "predicted_rps_media":
+				payload.PredictedRpsMedia = val
+			case "predicted_rps_content":
+				payload.PredictedRpsContent = val
+			case "predicted_replicas_media":
+				payload.PredictedReplicasMedia = val
+			case "predicted_replicas_content":
+				payload.PredictedReplicasContent = val
 			}
 			mu.Unlock()
 		}(key, query)
 	}
 
 	wg.Wait()
+
+	// Now using prometheus directly for predictions, no need for predMu here
+
 	return payload
 }
 
@@ -243,6 +282,27 @@ func main() {
 		}
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		w.Write(data)
+	})
+
+	// Prediction POST Endpoint
+	mux.HandleFunc("/api/predict", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		var pred PredictionData
+		if err := json.NewDecoder(r.Body).Decode(&pred); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		predMu.Lock()
+		latestPrediction = pred
+		predMu.Unlock()
+
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprintf(w, "OK")
 	})
 
 	// SSE Events Endpoint
