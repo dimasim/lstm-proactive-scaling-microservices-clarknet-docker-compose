@@ -65,7 +65,7 @@ services:
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
-      - '--storage.tsdb.retention.time=3d'
+      - '--storage.tsdb.retention.time=7d'
     ports:
       - "${PROMETHEUS_PORT}:9090"
     depends_on:
@@ -100,18 +100,19 @@ services:
       context: ./brain-orchestrator
     container_name: brain-orchestrator
     volumes:
-      - /home/dimas/kkk/data:/app/data:ro
-      - /home/dimas/kkk/models:/app/models:ro
+      - ../workload-research/dataset:/app/data:ro
+      - ../models:/app/models:ro
       - ./:/app/compose
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
       - PROMETHEUS_URL=http://prometheus:9090
       - DASHBOARD_PREDICT_URL=http://dashboard-service:3002/api/predict
-      - PRELOAD_CSV=${PRELOAD_CSV:-/app/data/combined_clarknet_rps_3x.csv}
+      - PRELOAD_CSV=/app/data/clarknet_features_30s.csv
       - COMPOSE_PROJECT_NAME=lstm-proactive-scaling-microservices-clarknet-docker-compose
       - COMPOSE_DIR=/app/compose
-      - MODEL_PATH=/app/models/LSTM_1min_1step.h5
-      - SCALER_PATH=/app/models/rps_scaler_1min_1step.pkl
+      - MODEL_PATH=/app/models/lstm_quantile_tau095_30s_7030.keras
+      - FEAT_SCALER_PATH=/app/models/feat_scaler.pkl
+      - TGT_SCALER_PATH=/app/models/tgt_scaler.pkl
     depends_on:
       - prometheus
       - dashboard-service

@@ -5,14 +5,17 @@ from prometheus_client import start_http_server, Gauge
 GAUGE_MEDIA = Gauge('sent_rps_media', 'Exact sent RPS for media')
 GAUGE_CONTENT = Gauge('sent_rps_content', 'Exact sent RPS for content')
 
+import sys
+
 def main():
     start_http_server(8001)
     print("Started Prometheus exporter on port 8001")
     
-    with open('k6_s2_peak_data.json') as f:
+    file_name = sys.argv[1] if len(sys.argv) > 1 else 'k6_s2_peak_data.json'
+    with open(file_name) as f:
         data = json.load(f)
         
-    print(f"Loaded {len(data)} seconds of data.")
+    print(f"Loaded {len(data)} seconds of data from {file_name}.")
     print("Starting synchronous replay of metrics to Prometheus...")
     
     # We want to sync with K6. If K6 is running, it advances 1 stage per second.

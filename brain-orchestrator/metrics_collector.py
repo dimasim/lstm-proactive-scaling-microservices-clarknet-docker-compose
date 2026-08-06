@@ -26,12 +26,14 @@ def query_prometheus(query):
 
 def get_current_metrics():
     """
-    Returns the current RPS for content and media services.
+    Returns the current RPS for content and media services concurrently.
     """
-    rps_content = query_prometheus('sum(sent_rps_content)')
-    rps_media = query_prometheus('sum(sent_rps_media)')
-    
-    return {
-        'rps_content': rps_content,
-        'rps_media': rps_media
-    }
+    import concurrent.futures
+    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+        f_content = executor.submit(query_prometheus, 'sum(sent_rps_content)')
+        f_media = executor.submit(query_prometheus, 'sum(sent_rps_media)')
+        
+        return {
+            'rps_content': f_content.result(),
+            'rps_media': f_media.result()
+        }
