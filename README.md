@@ -111,3 +111,61 @@ Untuk mempermudah penulisan naskah skripsi, beberapa berkas konsep dan ringkasan
 * [fundamental.md](file:///home/dimas/skripsi-clarknet/fundamental.md): Acuan logika data collection dan metrik telemetri.
 * [imdoukh2019-ringkasan.md](file:///home/dimas/skripsi-clarknet/imdoukh2019-ringkasan.md): Ringkasan jurnal rujukan utama (Imdoukh et al., 2019) mengenai *Docker Auto-scaling*.
 * [ringkasan-proposal-skripsi.md](file:///home/dimas/skripsi-clarknet/ringkasan-proposal-skripsi.md): Draft ringkasan proposal skripsi Anda.
+
+---
+
+## 6. Panduan Integrasi Layanan Baru (Microservice Integration Guide)
+
+Untuk mengintegrasikan layanan mikro baru (*new service*) ke dalam ekosistem *Proactive Auto-Scaling*, ikuti langkah-langkah berikut:
+
+### Langkah A: Konfigurasi Docker Compose (`docker-compose.yml`)
+1. Definisikan container baru dengan label compose project dan service yang sesuai.
+2. Sediakan replika kontainer siaga (*Cold Pool*) dengan nama berurutan (misalnya `new-service-1`, `new-service-2`, dst) namun diatur dalam keadaan berhenti (*stopped*) pada inisialisasi awal.
+3. Batasi resource CPU dan memori menggunakan `deploy.resources.limits` (misalnya 0.1 CPU core dan 64MB RAM) agar konsisten dengan evaluasi efisiensi kontainer.
+
+### Langkah B: Daftarkan ke Brain Orchestrator (`brain-orchestrator/main.py`)
+1. **Inisialisasi Cold Pool:**  
+   Tambahkan nama layanan baru ke daftar pencarian kontainer pada fungsi `_init_cold_pool()`:
+   ```python
+   for srv_name in ["content-service", "media-service", "new-service"]:
+   ```
+2. **Definisi Metrik Prometheus:**  
+   Tambahkan `Gauge` baru untuk memancarkan hasil prediksi dan jumlah target replika layanan baru ke Prometheus:
+   ```python
+   PRED_RPS_NEW = Gauge('predicted_rps_new', 'Predicted RPS for new-service')
+   TARGET_REP_NEW = Gauge('target_replicas_new', 'Target replicas for new-service')
+   ```
+3. **Pengambilan Metrik Aktif:**  
+   Perbarui modul `metrics_collector.py` untuk menarik metrik lalu lintas masuk (*RPS*) dari Prometheus untuk layanan baru.
+4. **Logika MAPE-K Loop:**  
+   Pada fungsi `run()`, hitung kebutuhan replika dan picu aktuasi GDS untuk layanan baru:
+   ```python
+   req_new = self.calculate_replicas(pred_new)
+   self.current_rep_new, self.cooldown_new = self.perform_gds_scaling(
+       "new-service", req_new, self.current_rep_new, self.cooldown_new
+   )
+   ```
+
+### Langkah C: Konfigurasi Ulang Target Scrape Prometheus & HAProxy
+1. Tambahkan target routing kontainer baru ke konfigurasi backend di berkas `haproxy.cfg`.
+2. Pastikan Prometheus melakukan *scrape* metrik cAdvisor dan HAProxy untuk mendeteksi metrics baru tersebut.
+
+---
+
+## 7. Fitur Utama & Panduan Evaluasi UAT (User Acceptance Testing)
+
+Bagian ini merangkum mekanisme teknis utama yang dinilai dalam kuesioner UAT/validasi kepuasan operator:
+
+### A. Mekanisme Container Cold Pool (Mitigasi Cold Start)
+* **Masalah:** Proses pembuatan container baru dari awal saat *scale-up* mendadak memicu penundaan waktu aktif (*cold start penalty*), yang berakibat pada penurunan keandalan SLA.
+* **Solusi:** Sistem menginisialisasi sejumlah kontainer cadangan dalam kondisi mati (*stopped*). Saat prediksi LSTM mendeteksi kenaikan beban, Aktuator hanya memanggil perintah *start* (`c.start()`) dari Docker Socket API, memotong durasi inisialisasi runtime & network secara instan (*warm start*).
+
+### B. Kebijakan Gradual Down-Scaling (GDS) & Cooldown Timer (CDT)
+* **Masalah:** Pola beban kerja yang sangat fluktuatif (*spiky / bursty*) dapat memicu osilasi penskalaan (kontainer terus mati-nyala berulang kali / *ping-pong effect*).
+* **Solusi:** 
+  * **CDT (Cooldown Timer):** Sistem menahan aksi *scale-down* selama 10 detik setelah aksi penskalaan terakhir untuk memberi jeda stabilisasi.
+  * **SDR (Scale-Down Ratio = 0.40):** Pengurangan kontainer dilakukan secara bertahap (tidak langsung mematikan semua kontainer sekaligus) dengan mengalikan selisih replika terhadap rasio desimal $0{,}40$, menjamin ketersediaan kapasitas cadangan jika terjadi lonjakan trafik susulan.
+
+### C. Observability & Dashboard Real-Time (Server-Sent Events)
+* Dashboard menyerap telemetri secara *push-based* melalui Server-Sent Events (SSE) langsung dari database Prometheus.
+* Memvisualisasikan perbandingan trafik aktual (RPS) terhadap prediksi LSTM Quantile ($\tau=0{,}95$) guna memberikan pemahaman langsung bagi operator/DevOps tentang performa *auto-scaler* dalam mematuhi SLA.
