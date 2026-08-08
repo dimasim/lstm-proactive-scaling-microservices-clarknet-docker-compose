@@ -9,6 +9,7 @@ const trafficData = new SharedArray('full test traffic', function () {
 
 export const options = {
     // Pengaturan resource-efficient: Hanya gunakan 1 VU untuk mengatur ritme, tapi izinkan tembakan batch paralel tinggi
+    discardResponseBodies: true, // WAJIB untuk pengujian berhari-hari agar memori tidak bocor (OOM)
     batch: 500,          // Maksimal 500 koneksi paralel per batch
     batchPerHost: 500,
     scenarios: {

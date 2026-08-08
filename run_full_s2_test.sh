@@ -25,7 +25,7 @@ echo -e "\nInisialisasi selesai!"
 
 echo ""
 echo "[4/4] Memulai simulasi badai trafik K6 FULL 30% (Testing Data)..."
-python3 k6_metrics_exporter.py k6_s2_full_data.json > k6_exporter.log 2>&1 &
+/usr/bin/python3 k6_metrics_exporter.py k6_s2_full_data.json > k6_exporter.log 2>&1 &
 EXPORTER_PID=$!
 
 echo "Menyalakan Jembatan Metrik (PID: $EXPORTER_PID)"
