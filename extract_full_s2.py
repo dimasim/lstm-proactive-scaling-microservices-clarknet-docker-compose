@@ -4,7 +4,7 @@ import json
 
 # Load raw dataset (yang sudah di-scale 3x)
 print("Loading 3x scaled dataset...")
-df_raw = pd.read_csv('../workload-research/dataset/clarknet_2weeks_scaled.csv')
+df_raw = pd.read_csv('./dataset/clarknet_2weeks_scaled.csv')
 
 # Ensure we're reading the right columns
 if 'rps_media' in df_raw.columns:

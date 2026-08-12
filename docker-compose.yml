@@ -100,8 +100,8 @@ services:
       context: ./brain-orchestrator
     container_name: brain-orchestrator
     volumes:
-      - ../workload-research/dataset:/app/data:ro
-      - ../models:/app/models:ro
+      - ./dataset:/app/data:ro
+      - ./models:/app/models:ro
       - ./:/app/compose
       - /var/run/docker.sock:/var/run/docker.sock
     environment:

@@ -222,10 +222,10 @@ model.compile(optimizer='adam', loss=quantile_loss(tau=0.95))
 
 **Tahap 4 — Output Pelatihan**
 
-Setelah training selesai, akan dihasilkan **3 file** yang wajib disimpan di direktori `../models/` (relatif dari root proyek ini):
+Setelah training selesai, akan dihasilkan **3 file** yang wajib disimpan di direktori `./models/` (relatif dari root proyek ini):
 
 ```
-../models/
+./models/
 ├── lstm_quantile_tau095_30s_7030.keras  # Model LSTM tersimpan
 ├── feat_scaler.pkl                       # Scaler untuk 12 fitur input
 └── tgt_scaler.pkl                        # Scaler untuk 2 output target
@@ -244,7 +244,7 @@ python kodetrainingmodel.py
 
 # Setelah selesai, salin output ke direktori models
 mkdir -p ../models
-cp lstm_quantile_tau095_30s_7030.keras feat_scaler.pkl tgt_scaler.pkl ../models/
+cp lstm_quantile_tau095_30s_7030.keras feat_scaler.pkl tgt_scaler.pkl ./models/
 ```
 
 ---
@@ -255,7 +255,7 @@ cp lstm_quantile_tau095_30s_7030.keras feat_scaler.pkl tgt_scaler.pkl ../models/
 
 ```bash
 # Verifikasi ketiga file model ada di tempat yang benar
-ls ../models/
+ls ./models/
 # Harus ada: lstm_quantile_tau095_30s_7030.keras  feat_scaler.pkl  tgt_scaler.pkl
 ```
 
@@ -360,7 +360,7 @@ Sebelum memulai UAT, pastikan kondisi berikut terpenuhi:
 | Prasyarat | Cara Verifikasi |
 |---|---|
 | Docker Desktop berjalan | `docker info` → tidak ada error |
-| Model LSTM tersedia | `ls ../models/` menampilkan 3 file |
+| Model LSTM tersedia | `ls ./models/` menampilkan 3 file |
 | Semua kontainer running | `docker compose ps` → semua status `running` |
 | Brain orchestrator OK | `docker logs brain-orchestrator` → "model loaded" |
 
@@ -691,7 +691,7 @@ return pred_content, pred_media, pred_api   # ← TAMBAH return value ke-3
 Jalankan ulang pelatihan:
 ```bash
 python kodetrainingmodel.py
-cp lstm_quantile_tau095_30s_7030.keras feat_scaler.pkl tgt_scaler.pkl ../models/
+cp lstm_quantile_tau095_30s_7030.keras feat_scaler.pkl tgt_scaler.pkl ./models/
 ```
 
 ---
@@ -907,7 +907,7 @@ python kodetrainingmodel.py
 
 # Salin output ke direktori models
 mkdir -p ../models
-cp lstm_quantile_tau095_30s_myapp.keras feat_scaler.pkl tgt_scaler.pkl ../models/
+cp lstm_quantile_tau095_30s_myapp.keras feat_scaler.pkl tgt_scaler.pkl ./models/
 ```
 
 > ⏱️ Estimasi waktu training: 5–30 menit tergantung ukuran dataset dan hardware (GPU mempercepat 5–10x).
@@ -919,9 +919,9 @@ import numpy as np
 import joblib
 from tensorflow.keras.models import load_model
 
-model      = load_model('../models/lstm_quantile_tau095_30s_myapp.keras', compile=False)
-feat_sc    = joblib.load('../models/feat_scaler.pkl')
-tgt_sc     = joblib.load('../models/tgt_scaler.pkl')
+model      = load_model('./models/lstm_quantile_tau095_30s_myapp.keras', compile=False)
+feat_sc    = joblib.load('./models/feat_scaler.pkl')
+tgt_sc     = joblib.load('./models/tgt_scaler.pkl')
 
 # Buat input dummy (60 langkah × 12 fitur)
 dummy = np.random.rand(60, 12).astype(np.float32)
@@ -1235,7 +1235,7 @@ TARGET_REP_B.set(self.current_rep_b)
 
  Fase 3  □  Edit kodetrainingmodel.py: ganti CSV_PATH dan TARGET_COLS
          □  Jalankan python kodetrainingmodel.py
-         □  Salin .keras + .pkl ke ../models/
+         □  Salin .keras + .pkl ke ./models/
          □  Validasi output model dengan quick_test.py
 
  Fase 4  □  Ganti docker-compose.yml dengan service aplikasi Anda

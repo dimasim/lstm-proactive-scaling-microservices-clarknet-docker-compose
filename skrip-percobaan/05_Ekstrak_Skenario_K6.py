@@ -3,8 +3,8 @@ import numpy as np
 import os
 
 # Konfigurasi Path
-DATASET_PATH = "../../data/combined_clarknet_rps_3x.csv"
-OUTPUT_DIR = "../skenario_k6_data"
+DATASET_PATH = "./dataset/aggregated_clarknet_rps_3x.csv"
+OUTPUT_DIR = "./skenario_k6_data"
 
 def main():
     print("Memuat dataset ClarkNet per detik...")
